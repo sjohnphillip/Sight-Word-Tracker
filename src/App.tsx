@@ -10,6 +10,9 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
+import { driver } from "driver.js";
+// @ts-ignore
+import "driver.js/dist/driver.css";
 
 type MasteryLevel = "secure" | "developing" | "unknown";
 type BulkLevel = MasteryLevel | "reset";
@@ -318,19 +321,19 @@ function openClassSummaryWindow(
     studentCount === 0
       ? 0
       : Math.round(
-          namedStudents.reduce((sum, student) => {
-            const fakeStudent: Student = {
-              id: student.id,
-              name: student.name,
-              known: student.known,
-              mastery: student.mastery,
-              history: [],
-              selectedPracticeWords: [],
-            };
-            const known = countKnown(fakeStudent, progressWordSet);
-            return sum + (progressTotal ? (known / progressTotal) * 100 : 0);
-          }, 0) / studentCount
-        );
+        namedStudents.reduce((sum, student) => {
+          const fakeStudent: Student = {
+            id: student.id,
+            name: student.name,
+            known: student.known,
+            mastery: student.mastery,
+            history: [],
+            selectedPracticeWords: [],
+          };
+          const known = countKnown(fakeStudent, progressWordSet);
+          return sum + (progressTotal ? (known / progressTotal) * 100 : 0);
+        }, 0) / studentCount
+      );
 
   const totalKnownAcrossClass = namedStudents.reduce((sum, student) => {
     const fakeStudent: Student = {
@@ -630,7 +633,7 @@ export default function App() {
   const [quickMode, setQuickMode] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("az");
   const [quickIndex, setQuickIndex] = useState(0);
-
+  const [hasRunTour, setHasRunTour] = useState(false);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>("automatic");
   const [autoPracticeStrategy, setAutoPracticeStrategy] =
     useState<AutoPracticeStrategy>("targeted_intervention");
@@ -684,7 +687,16 @@ export default function App() {
       console.error("Failed to load tracker data", error);
     }
   }, []);
+  useEffect(() => {
+    const seenTour = localStorage.getItem("sight_word_tracker_tour_seen");
+    if (!seenTour && !hasRunTour) {
+      const timer = setTimeout(() => {
+        startTour();
+      }, 700);
 
+      return () => clearTimeout(timer);
+    }
+  }, [hasRunTour]);
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -866,10 +878,10 @@ export default function App() {
       level === "secure"
         ? "Secure"
         : level === "developing"
-        ? "Developing"
-        : level === "unknown"
-        ? "Unknown"
-        : "neutral";
+          ? "Developing"
+          : level === "unknown"
+            ? "Unknown"
+            : "neutral";
 
     const confirmed = window.confirm(
       level === "reset"
@@ -1059,10 +1071,9 @@ export default function App() {
       `Student: ${student.name || "Student"}`,
       `Teacher: ${teacherName || ""}`,
       `Words known: ${progressKnownCount} / ${progressTotal}`,
-      `Progress basis: ${
-        progressBasis === "through_section"
-          ? `up to ${activeSection}`
-          : progressBasis === "custom_range"
+      `Progress basis: ${progressBasis === "through_section"
+        ? `up to ${activeSection}`
+        : progressBasis === "custom_range"
           ? `first ${customProgressSections * 100} words`
           : "all Fry lists"
       }`,
@@ -1118,54 +1129,54 @@ export default function App() {
   };
 
   const exportStudentDataCSV = () => {
-  if (!students.length) return;
+    if (!students.length) return;
 
-  // Header row
-  const headers = [
-    "Student Number",
-    "Student Name",
-    "Total Known",
-    "Secure",
-    "Developing",
-    "Unknown",
-    "Progress (%)"
-  ];
-
-  const rows = students.map((s, index) => {
-    const known = countKnown(s, progressWordSet);
-    const secure = countByMastery(s, progressWordSet, "secure");
-    const developing = countByMastery(s, progressWordSet, "developing");
-    const unknown = countUnknown(s, progressWords);
-    const percent = progressTotal
-      ? Math.round((known / progressTotal) * 100)
-      : 0;
-
-    return [
-      index + 1,
-      s.name || `Student ${index + 1}`,
-      known,
-      secure,
-      developing,
-      unknown,
-      percent
+    // Header row
+    const headers = [
+      "Student Number",
+      "Student Name",
+      "Total Known",
+      "Secure",
+      "Developing",
+      "Unknown",
+      "Progress (%)"
     ];
-  });
 
-  const csvContent =
-    [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n");
+    const rows = students.map((s, index) => {
+      const known = countKnown(s, progressWordSet);
+      const secure = countByMastery(s, progressWordSet, "secure");
+      const developing = countByMastery(s, progressWordSet, "developing");
+      const unknown = countUnknown(s, progressWords);
+      const percent = progressTotal
+        ? Math.round((known / progressTotal) * 100)
+        : 0;
 
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
+      return [
+        index + 1,
+        s.name || `Student ${index + 1}`,
+        known,
+        secure,
+        developing,
+        unknown,
+        percent
+      ];
+    });
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "class_student_data.csv";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+    const csvContent =
+      [headers, ...rows]
+        .map((row) => row.join(","))
+        .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "class_student_data.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   const copyReportText = async () => {
     try {
       await navigator.clipboard.writeText(buildReportText());
@@ -1366,7 +1377,7 @@ export default function App() {
       <div class="grid">
         <div class="field">
           <div class="field-label">Student:</div>
-          <div class="field-value">${student.name || "Student"}</div>
+          <div className="field-value">{student?.name || "Student"}</div>
         </div>
 
         <div class="field">
@@ -1381,13 +1392,12 @@ export default function App() {
 
         <div class="field">
           <div class="field-label">Progress Basis:</div>
-          <div class="field-value">${
-            progressBasis === "through_section"
-              ? `Up to ${activeSection}`
-              : progressBasis === "custom_range"
-              ? `First ${customProgressSections * 100} words`
-              : "All Fry lists"
-          }</div>
+          <div class="field-value">${progressBasis === "through_section"
+        ? `Up to ${activeSection}`
+        : progressBasis === "custom_range"
+          ? `First ${customProgressSections * 100} words`
+          : "All Fry lists"
+      }</div>
         </div>
       </div>
 
@@ -1655,7 +1665,7 @@ export default function App() {
       <div class="grid">
         <div class="field">
           <div class="field-label">Student:</div>
-          <div class="field-value">${student.name || "Student"}</div>
+          <div class="field-value">${student?.name || "Student"}</div>
         </div>
 
         <div class="field">
@@ -1670,13 +1680,12 @@ export default function App() {
 
         <div class="field">
           <div class="field-label">Progress Basis:</div>
-          <div class="field-value">${
-            progressBasis === "through_section"
-              ? `Up to ${activeSection}`
-              : progressBasis === "custom_range"
-              ? `First ${customProgressSections * 100} words`
-              : "All Fry lists"
-          }</div>
+          <div class="field-value">${progressBasis === "through_section"
+        ? `Up to ${activeSection}`
+        : progressBasis === "custom_range"
+          ? `First ${customProgressSections * 100} words`
+          : "All Fry lists"
+      }</div>
         </div>
       </div>
 
@@ -1706,7 +1715,26 @@ export default function App() {
 </html>`);
     win.document.close();
   };
+  const startTour = () => {
+    alert("startTour is running");
 
+    const tour = driver({
+      showProgress: true,
+      allowClose: true,
+      steps: [
+        {
+          popover: {
+            title: "Tour test",
+            description: "If you can see this, the tour is working.",
+            side: "bottom",
+            align: "center",
+          },
+        },
+      ],
+    });
+
+    tour.drive();
+  };
   if (!student) {
     return <div className="p-4">Select a student</div>;
   }
@@ -1714,17 +1742,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto max-w-[1600px] space-y-5">
-        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm md:p-7">
+        <div id="tour-header" className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm md:p-7">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="pr-2">
               <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-  Sight Word Tracker
-</h1>
-<p className="mt-2 text-sm text-slate-500 md:text-base">
-  Clear tracking for real reading progress.
-</p>
+                Sight Word Tracker
+              </h1>
+              <p className="mt-2 text-sm text-slate-500 md:text-base">
+                Clear tracking for real reading progress.
+              </p>
             </div>
-
+            <Button
+              variant="outline"
+              onClick={startTour}
+              className="h-11 rounded-2xl px-5"
+            >
+              Help / Tour
+            </Button>
             <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
               <Button onClick={() => setQuickMode((v) => !v)} className="h-11 rounded-2xl px-5">
                 <Zap className="mr-2 h-4 w-4" />
@@ -1754,7 +1788,7 @@ export default function App() {
                 className="h-11 rounded-2xl px-5"
               >
                 <Printer className="mr-2 h-4 w-4" />
-                Parent report
+                Parent Report
               </Button>
 
               <Button
@@ -1769,759 +1803,770 @@ export default function App() {
               >
                 End Report
               </Button>
+
+              <Button
+                variant="outline"
+                onClick={startTour}
+                className="h-11 rounded-2xl px-5"
+              >
+                Help / Tour
+              </Button>
             </div>
-          </div>
-        </div>
-
-        <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-5 md:p-6">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-              <div className="min-w-0">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Teacher name
-                </label>
-                <Input
-                  value={teacherName}
-                  onChange={(e) => setTeacherName(e.target.value)}
-                  className="h-11 w-full rounded-2xl text-base"
-                />
-              </div>
-
-              <div className="min-w-0">
-                <label className="mb-2 block text-sm font-medium text-slate-700">Student</label>
-                <select
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-base"
-                >
-                  {students.map((s, i) => (
-                    <option key={s.id} value={s.id}>
-                      {`Student ${i + 1}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="min-w-0">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Student name
-                </label>
-                <Input
-                  value={student.name}
-                  onChange={(e) => updateStudent({ name: e.target.value })}
-                  className="h-11 w-full rounded-2xl text-base"
-                />
-              </div>
-
-              <div className="min-w-0">
-                <label className="mb-2 block text-sm font-medium text-slate-700">Search</label>
-                <div className="relative">
-                  <SearchIcon className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="h-11 w-full rounded-2xl pl-9 text-base"
-                  />
-                </div>
-              </div>
-
-              <div className="min-w-0">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Progress basis
-                </label>
-                <select
-                  value={progressBasis}
-                  onChange={(e) => setProgressBasis(e.target.value as ProgressBasis)}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                >
-                  <option value="all">All words (1–1000)</option>
-                  <option value="through_section">Up to this level</option>
-                  <option value="custom_range">Choose a word range</option>
-                </select>
-              </div>
-
-              {progressBasis === "custom_range" ? (
-                <div className="min-w-0">
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Custom range
-                  </label>
-                  <select
-                    value={customProgressSections}
-                    onChange={(e) => setCustomProgressSections(Number(e.target.value))}
-                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    {SECTIONS.map((section, index) => (
-                      <option key={section} value={index + 1}>
-                        {`First ${(index + 1) * 100} words`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="min-w-0" />
-              )}
-
-              <div className="flex items-end gap-3 xl:col-span-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const next = createStudent();
-                    setStudents([...students, next]);
-                    setSelectedId(next.id);
-                  }}
-                  className="h-11 min-w-[110px] rounded-2xl px-4"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={deleteCurrentStudent}
-                  className="h-11 min-w-[110px] rounded-2xl px-4"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-
-                <select
-                  value={sortMode}
-                  onChange={(e) => setSortMode(e.target.value as SortMode)}
-                  className="h-11 min-w-[140px] rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                >
-                  <option value="az">A-Z</option>
-                  <option value="most">Most known</option>
-                  <option value="least">Least known</option>
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
-          <div className="space-y-5">
+<div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+  <div className="space-y-5">
             <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <CardHeader className="p-5 pb-0">
-                <CardTitle className="text-[28px] font-semibold text-slate-900">
-                  Progress overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 p-5">
-                <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-5 ring-1 ring-slate-200">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-slate-900">Overall progress</span>
-                    <Badge>
-                      {progressKnownCount}/{progressTotal}
-                    </Badge>
-                  </div>
-                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-slate-900 to-slate-700"
-                      style={{ width: `${progressPercent}%` }}
+              <CardContent className="p-5 md:p-6">
+                <div id="tour-student-controls" className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Teacher name
+                    </label>
+                    <Input
+                      value={teacherName}
+                      onChange={(e) => setTeacherName(e.target.value)}
+                      className="h-11 w-full rounded-2xl text-base"
                     />
                   </div>
-                  <p className="mt-3 text-sm text-slate-600">{progressPercent}% complete</p>
-                </div>
 
-                <Button
-                  variant="outline"
-                  className="h-11 w-full rounded-2xl"
-                  onClick={saveAssessment}
-                >
-                  Save assessment
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <CardHeader className="p-5 pb-0">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <CardTitle className="text-[28px] font-semibold text-slate-900">
-                    Class overview
-                  </CardTitle>
-                  <div className="flex flex-wrap gap-2">
-  <Button
-    variant="outline"
-    className="h-10 rounded-xl px-4"
-    onClick={handleOpenClassSummary}
-  >
-    <Table2 className="mr-2 h-4 w-4" />
-    Open Class Summary
-  </Button>
-
-  <Button
-    variant="outline"
-    className="h-10 rounded-xl px-4"
-    onClick={exportStudentDataCSV}
-  >
-    <Download className="mr-2 h-4 w-4" />
-    Export CSV
-  </Button>
-</div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-5">
-                <div className="grid gap-3">
-                  {sortedStudents
-                    .filter((s) => (s.name || "").trim())
-                    .map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => setSelectedId(s.id)}
-                        className="rounded-3xl border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="font-semibold">
-                            {`${studentNumberMap.get(s.id)}. ${s.name}`}
-                          </h3>
-                          <Badge>
-                            {countKnown(s, progressWordSet)}/{progressTotal}
-                          </Badge>
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="p-5 pb-0">
-              <CardTitle className="text-[28px] font-semibold text-slate-900">
-                Assessment screen
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5">
-              {quickMode ? (
-                <div className="rounded-3xl border bg-slate-50 p-10 text-center">
-                  <p className="mb-3 text-sm text-slate-500">Quick Assess Mode</p>
-                  <h2 className="mb-8 text-5xl font-bold">{allWords[quickIndex]}</h2>
-                  <div className="flex justify-center gap-3">
-                    <Button className="h-12 rounded-2xl px-6" onClick={() => nextQuickWord(true)}>
-                      Correct
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 rounded-2xl px-6"
-                      onClick={() => nextQuickWord(false)}
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Student</label>
+                    <select
+                      value={selectedId}
+                      onChange={(e) => setSelectedId(e.target.value)}
+                      className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-base"
                     >
-                      Incorrect
-                    </Button>
+                      {students.map((s, i) => (
+                        <option key={s.id} value={s.id}>
+                          {`Student ${i + 1}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <ScrollArea className="w-full whitespace-nowrap pb-3">
-                    <div className="inline-flex gap-3">
-                      {SECTIONS.map((section) => {
-                        const isActive = activeSection === section;
-                        return (
-                          <button
-                            key={section}
-                            type="button"
-                            onClick={() => setActiveSection(section)}
-                            className={`h-11 rounded-2xl border px-5 text-sm font-medium inline-flex items-center justify-center gap-2 ${
-                              isActive
-                                ? "border-slate-700 bg-white text-slate-900 shadow-sm"
-                                : "border-slate-200 bg-white text-slate-700"
-                            }`}
-                          >
-                            <span>{section}</span>
-                            {isActive ? (
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                                Current
-                              </span>
-                            ) : null}
-                          </button>
-                        );
-                      })}
+
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Student name
+                    </label>
+                    <Input
+                      value={student.name}
+                      onChange={(e) => updateStudent({ name: e.target.value })}
+                      className="h-11 w-full rounded-2xl text-base"
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Search</label>
+                    <div className="relative">
+                      <SearchIcon className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="h-11 w-full rounded-2xl pl-9 text-base"
+                      />
                     </div>
-                  </ScrollArea>
-
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Button
-                      variant="outline"
-                      className="h-10 rounded-xl px-4"
-                      onClick={() => markWholeSection(activeSection, "secure")}
-                    >
-                      Mark all Secure
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="h-10 rounded-xl px-4"
-                      onClick={() => markWholeSection(activeSection, "developing")}
-                    >
-                      Mark all Developing
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="h-10 rounded-xl px-4"
-                      onClick={() => markWholeSection(activeSection, "unknown")}
-                    >
-                      Mark all Unknown
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="h-10 rounded-xl px-4"
-                      onClick={() => markWholeSection(activeSection, "reset")}
-                    >
-                      Reset section
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="h-10 rounded-xl px-4"
-                      onClick={() => promoteUnknownToDeveloping(activeSection)}
-                    >
-                      Unknown → Developing
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="h-10 rounded-xl px-4"
-                      onClick={() => promoteDevelopingToSecure(activeSection)}
-                    >
-                      Developing → Secure
-                    </Button>
                   </div>
 
-                  <div className="mt-5">
-                    <ScrollArea className="h-[560px] pr-3">
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
-                        {filteredWords.map((word) => {
-                          const section = activeSection;
-                          const mastery = student.mastery?.[section]?.[word];
-                          const inPracticeList = (student.selectedPracticeWords || []).includes(word);
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Progress basis
+                    </label>
+                    <select
+                      value={progressBasis}
+                      onChange={(e) => setProgressBasis(e.target.value as ProgressBasis)}
+                      className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
+                    >
+                      <option value="all">All words (1–1000)</option>
+                      <option value="through_section">Up to this level</option>
+                      <option value="custom_range">Choose a word range</option>
+                    </select>
+                  </div>
 
-                          return (
-                            <div
-                              key={word}
-                              className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
-                            >
-                              <button
-                                onClick={() => toggleWord(word, section)}
-                                className="min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 text-left text-[28px] font-semibold text-slate-800"
-                              >
-                                {word}
-                              </button>
+                  {progressBasis === "custom_range" ? (
+                    <div className="min-w-0">
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Custom range
+                      </label>
+                      <select
+                        value={customProgressSections}
+                        onChange={(e) => setCustomProgressSections(Number(e.target.value))}
+                        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
+                      >
+                        {SECTIONS.map((section, index) => (
+                          <option key={section} value={index + 1}>
+                            {`First ${(index + 1) * 100} words`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="min-w-0" />
+                  )}
 
-                              <div className="mt-4 flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => setMastery(word, section, "secure")}
-                                  className={`min-w-[96px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150 ${
-                                    mastery === "secure"
-                                      ? "border-green-500 bg-green-500 text-white"
-                                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                                  }`}
-                                >
-                                  Secure
-                                </button>
+                  <div className="flex items-end gap-3 xl:col-span-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const next = createStudent();
+                        setStudents([...students, next]);
+                        setSelectedId(next.id);
+                      }}
+                      className="h-11 min-w-[110px] rounded-2xl px-4"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add
+                    </Button>
 
-                                <button
-                                  onClick={() => setMastery(word, section, "developing")}
-                                  className={`min-w-[120px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150 ${
-                                    mastery === "developing"
-                                      ? "border-orange-400 bg-orange-400 text-white"
-                                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                                  }`}
-                                >
-                                  Developing
-                                </button>
+                    <Button
+                      variant="outline"
+                      onClick={deleteCurrentStudent}
+                      className="h-11 min-w-[110px] rounded-2xl px-4"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
 
-                                <button
-                                  onClick={() => setMastery(word, section, "unknown")}
-                                  className={`min-w-[110px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150 ${
-                                    mastery === "unknown"
-                                      ? "border-red-500 bg-red-500 text-white"
-                                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                                  }`}
-                                >
-                                  Unknown
-                                </button>
-                              </div>
-
-                              <button
-                                onClick={() => togglePracticeWord(word)}
-                                className={`mt-4 w-full rounded-2xl border px-4 py-3 text-sm transition ${
-                                  inPracticeList
-                                    ? "border-slate-900 bg-slate-900 text-white"
-                                    : "border-slate-300 bg-slate-50 text-slate-700"
-                                }`}
-                              >
-                                {inPracticeList
-                                  ? "Remove from practice list"
-                                  : "Add to practice list"}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
+                    <select
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value as SortMode)}
+                      className="h-11 min-w-[140px] rounded-2xl border border-slate-200 bg-white px-3 text-sm"
+                    >
+                      <option value="az">A-Z</option>
+                      <option value="most">Most known</option>
+                      <option value="least">Least known</option>
+                    </select>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="space-y-5">
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <CardHeader className="p-5 pb-0">
-                <CardTitle className="text-[28px] font-semibold text-slate-900">
-                  Home Practice List
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 p-5">
-                <div className="grid grid-cols-2 gap-3">
-                  <select
-                    value={practiceMode}
-                    onChange={(e) => setPracticeMode(e.target.value as PracticeMode)}
-                    className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option value="automatic">Auto (smart)</option>
-                    <option value="selected">My chosen words</option>
-                  </select>
-
-                  <select
-                    value={practiceCount}
-                    onChange={(e) => setPracticeCount(Number(e.target.value) as 10 | 20)}
-                    className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option value={10}>Top 10</option>
-                    <option value={20}>Top 20</option>
-                  </select>
-                </div>
-
-                {practiceMode === "automatic" ? (
-                  <select
-                    value={autoPracticeStrategy}
-                    onChange={(e) =>
-                      setAutoPracticeStrategy(e.target.value as AutoPracticeStrategy)
-                    }
-                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option value="targeted_intervention">Targeted intervention</option>
-                    <option value="priority_fix">Priority fix</option>
-                    <option value="confidence_builder">Confidence builder</option>
-                  </select>
-                ) : null}
-
-                <p className="text-sm leading-7 text-slate-700">
-                  {getPracticeWords().length
-                    ? getPracticeWords().join(", ")
-                    : "No words selected yet."}
-                </p>
               </CardContent>
             </Card>
+</div>
+           
+              <div className="space-y-5">
+<Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+                   <CardHeader>
+                    <CardTitle className="text-[28px] font-semibold text-slate-900">
+         
+                      Progress overview
+                    </CardTitle>
+                    
+                  </CardHeader>
+                  <CardContent className="space-y-4 p-5">
+                    <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-5 ring-1 ring-slate-200">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-slate-900">Overall progress</span>
+                        <Badge>
+                          {progressKnownCount}/{progressTotal}
+                        </Badge>
+                      </div>
+                      <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-slate-900 to-slate-700"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                      <p className="mt-3 text-sm text-slate-600">{progressPercent}% complete</p>
+                    </div>
 
-            {statusMessage ? (
+                    <Button
+                      id="tour-save-assessment"
+                      variant="outline"
+                      className="h-11 w-full rounded-2xl"
+                      onClick={saveAssessment}
+                    >
+                      Save assessment
+                    </Button>
+                  </CardContent>
+                </Card>
+
+               <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm"> 
+                  <CardHeader className="p-5 pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <CardTitle className="text-[28px] font-semibold text-slate-900">
+                        Class overview
+                      </CardTitle>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={handleOpenClassSummary}
+                        >
+                          <Table2 className="mr-2 h-4 w-4" />
+                          Open Class Summary
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={exportStudentDataCSV}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Export CSV
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-5">
+                    <div className="grid gap-3">
+                      {sortedStudents
+                        .filter((s) => (s.name || "").trim())
+                        .map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() => setSelectedId(s.id)}
+                            className="rounded-3xl border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <h3 className="font-semibold">
+                                {`${studentNumberMap.get(s.id)}. ${s.name}`}
+                              </h3>
+                              <Badge>
+                                {countKnown(s, progressWordSet)}/{progressTotal}
+                              </Badge>
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+                </div>
+
+              </div>
+<div className="space-y-5"></div>
               <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
                 <CardHeader className="p-5 pb-0">
                   <CardTitle className="text-[28px] font-semibold text-slate-900">
-                    Latest action
+                    Assessment screen
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-5">
-                  <p className="text-sm text-slate-700">{statusMessage}</p>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {showPracticePreview ? (
-              <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-                <CardHeader className="p-5 pb-0">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <CardTitle className="text-[28px] font-semibold text-slate-900">
-                      Practice list preview
-                    </CardTitle>
-                    <div className="flex flex-wrap gap-2">
-                      <Button onClick={downloadPracticeList} className="h-10 rounded-xl px-4">
-                        <Download className="mr-2 h-4 w-4" /> Download
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => void copyPracticeList()}
-                        className="h-10 rounded-xl px-4"
-                      >
-                        <Copy className="mr-2 h-4 w-4" /> Copy
-                      </Button>
+                  {quickMode ? (
+                    <div className="rounded-3xl border bg-slate-50 p-10 text-center">
+                      <p className="mb-3 text-sm text-slate-500">Quick Assess Mode</p>
+                      <h2 className="mb-8 text-5xl font-bold">{allWords[quickIndex]}</h2>
+                      <div className="flex justify-center gap-3">
+                        <Button className="h-12 rounded-2xl px-6" onClick={() => nextQuickWord(true)}>
+                          Correct
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-12 rounded-2xl px-6"
+                          onClick={() => nextQuickWord(false)}
+                        >
+                          Incorrect
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 p-5">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-700">
-                    {getPracticeWords().length
-                      ? getPracticeWords().join(", ")
-                      : "No words selected yet."}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {showReportPreview ? (
-              <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div
-                  className="h-[72px] border-b border-slate-200"
-                  style={{
-                    background:
-                      "radial-gradient(circle at 20px 20px, #b9d7da 2px, transparent 3px), radial-gradient(circle at 60px 35px, #c7e1e3 2px, transparent 3px), linear-gradient(135deg, #eef7f8 25%, #f8fcfc 25%, #f8fcfc 50%, #eef7f8 50%, #eef7f8 75%, #f8fcfc 75%, #f8fcfc 100%)",
-                    backgroundSize: "40px 40px",
-                  }}
-                />
-                <CardContent className="p-6 md:p-8">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
+                  ) : (
                     <div>
-                      <h2 className="text-4xl font-extrabold tracking-[0.12em] text-[#4ea3aa]">
-                        SIGHT WORD RECORD
-                      </h2>
-                      <p className="mt-2 text-lg font-extrabold text-slate-800">
-                        PROGRESS REPORT
-                      </p>
-                    </div>
+                      <ScrollArea  className="w-full whitespace-nowrap pb-3">
+                        <div className="inline-flex gap-3">
+                          {SECTIONS.map((section) => {
+                            const isActive = activeSection === section;
+                            return (
+                              <button
+                                key={section}
+                                type="button"
+                                onClick={() => setActiveSection(section)}
+                                className={`h-11 rounded-2xl border px-5 text-sm font-medium inline-flex items-center justify-center gap-2 ${isActive
+                                    ? "border-slate-700 bg-white text-slate-900 shadow-sm"
+                                    : "border-slate-200 bg-white text-slate-700"
+                                  }`}
+                              >
+                                <span>{section}</span>
+                                {isActive ? (
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                                    Current
+                                  </span>
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        onClick={openParentReportPrintWindow}
-                        className="h-10 rounded-xl px-4"
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={() => markWholeSection(activeSection, "secure")}
+                        >
+                          Mark all Secure
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={() => markWholeSection(activeSection, "developing")}
+                        >
+                          Mark all Developing
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={() => markWholeSection(activeSection, "unknown")}
+                        >
+                          Mark all Unknown
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={() => markWholeSection(activeSection, "reset")}
+                        >
+                          Reset section
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={() => promoteUnknownToDeveloping(activeSection)}
+                        >
+                          Unknown → Developing
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-10 rounded-xl px-4"
+                          onClick={() => promoteDevelopingToSecure(activeSection)}
+                        >
+                          Developing → Secure
+                        </Button>
+                      </div>
+
+                      <div id="tour-word-grid" className="mt-5">
+                        <ScrollArea className="h-[560px] pr-3">
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                            {filteredWords.map((word) => {
+                              const section = activeSection;
+                              const mastery = student.mastery?.[section]?.[word];
+                              const inPracticeList = (student.selectedPracticeWords || []).includes(word);
+
+                              return (
+                                <div
+                                  key={word}
+                                  className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+                                >
+                                  <button
+                                    onClick={() => toggleWord(word, section)}
+                                    className="min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 text-left text-[28px] font-semibold text-slate-800"
+                                  >
+                                    {word}
+                                  </button>
+
+                                  <div className="mt-4 flex flex-wrap gap-2">
+                                    <button
+                                      onClick={() => setMastery(word, section, "secure")}
+                                      className={`min-w-[96px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150 ${mastery === "secure"
+                                          ? "border-green-500 bg-green-500 text-white"
+                                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                    >
+                                      Secure
+                                    </button>
+
+                                    <button
+                                      onClick={() => setMastery(word, section, "developing")}
+                                      className={`min-w-[120px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150 ${mastery === "developing"
+                                          ? "border-orange-400 bg-orange-400 text-white"
+                                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                    >
+                                      Developing
+                                    </button>
+
+                                    <button
+                                      onClick={() => setMastery(word, section, "unknown")}
+                                      className={`min-w-[110px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150 ${mastery === "unknown"
+                                          ? "border-red-500 bg-red-500 text-white"
+                                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                    >
+                                      Unknown
+                                    </button>
+                                  </div>
+
+                                  <button
+                                    onClick={() => togglePracticeWord(word)}
+                                    className={`mt-4 w-full rounded-2xl border px-4 py-3 text-sm transition ${inPracticeList
+                                        ? "border-slate-900 bg-slate-900 text-white"
+                                        : "border-slate-300 bg-slate-50 text-slate-700"
+                                      }`}
+                                  >
+                                    {inPracticeList
+                                      ? "Remove from practice list"
+                                      : "Add to practice list"}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="space-y-5">
+                <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+                  <CardHeader className="p-5 pb-0">
+                    <CardTitle className="text-[28px] font-semibold text-slate-900">
+  Home Practice List
+</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 p-5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <select
+                        value={practiceMode}
+                        onChange={(e) => setPracticeMode(e.target.value as PracticeMode)}
+                        className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
                       >
-                        <Printer className="mr-2 h-4 w-4" /> Print
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={downloadReportText}
-                        className="h-10 rounded-xl px-4"
+                        <option value="automatic">Auto (smart)</option>
+                        <option value="selected">My chosen words</option>
+                      </select>
+
+                      <select
+                        value={practiceCount}
+                        onChange={(e) => setPracticeCount(Number(e.target.value) as 10 | 20)}
+                        className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
                       >
-                        <Download className="mr-2 h-4 w-4" /> Download
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => void copyReportText()}
-                        className="h-10 rounded-xl px-4"
+                        <option value={10}>Top 10</option>
+                        <option value={20}>Top 20</option>
+                      </select>
+                    </div>
+
+                    {practiceMode === "automatic" ? (
+                      <select
+                        value={autoPracticeStrategy}
+                        onChange={(e) =>
+                          setAutoPracticeStrategy(e.target.value as AutoPracticeStrategy)
+                        }
+                        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
                       >
-                        <Copy className="mr-2 h-4 w-4" /> Copy
-                      </Button>
-                    </div>
-                  </div>
+                        <option value="targeted_intervention">Targeted intervention</option>
+                        <option value="priority_fix">Priority fix</option>
+                        <option value="confidence_builder">Confidence builder</option>
+                      </select>
+                    ) : null}
 
-                  <div className="mt-6 grid gap-5 md:grid-cols-2">
-                    <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-sm font-extrabold text-slate-800">Student:</div>
-                      <div className="text-sm text-slate-800">{student.name || "Student"}</div>
-                    </div>
-
-                    <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-sm font-extrabold text-slate-800">Teacher:</div>
-                      <div className="text-sm text-slate-800">{teacherName || ""}</div>
-                    </div>
-
-                    <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-sm font-extrabold text-slate-800">
-                        Words Known:
-                      </div>
-                      <div className="text-sm text-slate-800">
-                        {progressKnownCount} / {progressTotal}
-                      </div>
-                    </div>
-
-                    <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-sm font-extrabold text-slate-800">
-                        Progress Basis:
-                      </div>
-                      <div className="text-sm text-slate-800">
-                        {progressBasis === "through_section"
-                          ? `Up to ${activeSection}`
-                          : progressBasis === "custom_range"
-                          ? `First ${customProgressSections * 100} words`
-                          : "All Fry lists"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 min-h-[180px] border-[3px] border-[#5aaeb4] p-4">
-                    <p className="mb-3 text-sm text-slate-700">
-                      You're doing great! Please practise these words.
-                    </p>
-                    <p className="text-sm leading-7 text-slate-800">
+                    <p className="text-sm leading-7 text-slate-700">
                       {getPracticeWords().length
                         ? getPracticeWords().join(", ")
                         : "No words selected yet."}
                     </p>
-                  </div>
+                  </CardContent>
+                </Card>
+                
 
-                  <div className="mt-3 bg-[#72b8bd] px-4 py-2 text-center text-sm font-extrabold tracking-[0.12em] text-slate-800">
-                    You can practise here
-                  </div>
+                {statusMessage ? (
+                  
+                  <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+                    <CardHeader className="p-5 pb-0">
+                      <CardTitle className="text-[28px] font-semibold text-slate-900">
+                        Latest action
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                      <p className="text-sm text-slate-700">{statusMessage}</p>
+                    </CardContent>
+                  </Card>
+                ) : null}
 
-                  <div
-                    className="min-h-[300px] border-[3px] border-[#5aaeb4] p-4"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(to bottom, transparent 31px, #e8f2f3 32px)",
-                      backgroundSize: "100% 32px",
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            ) : null}
+                {showPracticePreview ? (
+                  <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+                    <CardHeader className="p-5 pb-0">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <CardTitle className="text-[28px] font-semibold text-slate-900">
+                          Practice list preview
+                        </CardTitle>
+                        <div className="flex flex-wrap gap-2">
+                          <Button onClick={downloadPracticeList} className="h-10 rounded-xl px-4">
+                            <Download className="mr-2 h-4 w-4" /> Download
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => void copyPracticeList()}
+                            className="h-10 rounded-xl px-4"
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> Copy
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4 p-5">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-700">
+                        {getPracticeWords().length
+                          ? getPracticeWords().join(", ")
+                          : "No words selected yet."}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
 
-            {showEndReportPreview ? (
-              <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div
-                  className="h-[60px]"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #c7d8ea 0 5%, #89a6c5 5% 10%, #c7d8ea 10% 15%, #89a6c5 15% 20%, #c7d8ea 20% 25%, #89a6c5 25% 30%, #c7d8ea 30% 35%, #89a6c5 35% 40%, #c7d8ea 40% 45%, #89a6c5 45% 50%, #c7d8ea 50% 55%, #89a6c5 55% 60%, #c7d8ea 60% 65%, #89a6c5 65% 70%, #c7d8ea 70% 75%, #89a6c5 75% 80%, #c7d8ea 80% 85%, #89a6c5 85% 90%, #c7d8ea 90% 95%, #89a6c5 95% 100%)",
-                  }}
-                />
-                <CardContent className="p-5 md:p-8">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[18px] font-extrabold tracking-[0.03em] text-slate-800">
-                        END REPORT
-                      </p>
-                      <h2 className="mt-2 text-[52px] font-extrabold leading-none tracking-[0.06em] text-[#4ea3aa] md:text-[58px]">
-                        SPELLING RECORD
-                      </h2>
-                    </div>
+                {showReportPreview ? (
+                  <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div
+                      className="h-[72px] border-b border-slate-200"
+                      style={{
+                        background:
+                          "radial-gradient(circle at 20px 20px, #b9d7da 2px, transparent 3px), radial-gradient(circle at 60px 35px, #c7e1e3 2px, transparent 3px), linear-gradient(135deg, #eef7f8 25%, #f8fcfc 25%, #f8fcfc 50%, #eef7f8 50%, #eef7f8 75%, #f8fcfc 75%, #f8fcfc 100%)",
+                        backgroundSize: "40px 40px",
+                      }}
+                    />
+                    <CardContent className="p-6 md:p-8">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <h2 className="text-4xl font-extrabold tracking-[0.12em] text-[#4ea3aa]">
+                            SIGHT WORD RECORD
+                          </h2>
+                          <p className="mt-2 text-lg font-extrabold text-slate-800">
+                            PROGRESS REPORT
+                          </p>
+                        </div>
 
-                    <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            onClick={openParentReportPrintWindow}
+                            className="h-10 rounded-xl px-4"
+                          >
+                            <Printer className="mr-2 h-4 w-4" /> Print
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={downloadReportText}
+                            className="h-10 rounded-xl px-4"
+                          >
+                            <Download className="mr-2 h-4 w-4" /> Download
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => void copyReportText()}
+                            className="h-10 rounded-xl px-4"
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> Copy
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 grid gap-5 md:grid-cols-2">
+                        <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-sm font-extrabold text-slate-800">Student:</div>
+                          <div className="text-sm text-slate-800">{student.name || "Student"}</div>
+                        </div>
+
+                        <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-sm font-extrabold text-slate-800">Teacher:</div>
+                          <div className="text-sm text-slate-800">{teacherName || ""}</div>
+                        </div>
+
+                        <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-sm font-extrabold text-slate-800">
+                            Words Known:
+                          </div>
+                          <div className="text-sm text-slate-800">
+                            {progressKnownCount} / {progressTotal}
+                          </div>
+                        </div>
+
+                        <div className="min-h-[64px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-sm font-extrabold text-slate-800">
+                            Progress Basis:
+                          </div>
+                          <div className="text-sm text-slate-800">
+                            {progressBasis === "through_section"
+                              ? `Up to ${activeSection}`
+                              : progressBasis === "custom_range"
+                                ? `First ${customProgressSections * 100} words`
+                                : "All Fry lists"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 min-h-[180px] border-[3px] border-[#5aaeb4] p-4">
+                        <p className="mb-3 text-sm text-slate-700">
+                          You're doing great! Please practise these words.
+                        </p>
+                        <p className="text-sm leading-7 text-slate-800">
+                          {getPracticeWords().length
+                            ? getPracticeWords().join(", ")
+                            : "No words selected yet."}
+                        </p>
+                      </div>
+
+                      <div className="mt-3 bg-[#72b8bd] px-4 py-2 text-center text-sm font-extrabold tracking-[0.12em] text-slate-800">
+                        You can practise here
+                      </div>
+
+                      <div
+                        className="min-h-[300px] border-[3px] border-[#5aaeb4] p-4"
+                        style={{
+                          backgroundImage:
+                            "linear-gradient(to bottom, transparent 31px, #e8f2f3 32px)",
+                          backgroundSize: "100% 32px",
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                {showEndReportPreview ? (
+                  <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div
+                      className="h-[60px]"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, #c7d8ea 0 5%, #89a6c5 5% 10%, #c7d8ea 10% 15%, #89a6c5 15% 20%, #c7d8ea 20% 25%, #89a6c5 25% 30%, #c7d8ea 30% 35%, #89a6c5 35% 40%, #c7d8ea 40% 45%, #89a6c5 45% 50%, #c7d8ea 50% 55%, #89a6c5 55% 60%, #c7d8ea 60% 65%, #89a6c5 65% 70%, #c7d8ea 70% 75%, #89a6c5 75% 80%, #c7d8ea 80% 85%, #89a6c5 85% 90%, #c7d8ea 90% 95%, #89a6c5 95% 100%)",
+                      }}
+                    />
+                    <CardContent className="p-5 md:p-8">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className="text-[18px] font-extrabold tracking-[0.03em] text-slate-800">
+                            END REPORT
+                          </p>
+                          <h2 className="mt-2 text-[52px] font-extrabold leading-none tracking-[0.06em] text-[#4ea3aa] md:text-[58px]">
+                            SPELLING RECORD
+                          </h2>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            onClick={openEndReportPrintWindow}
+                            className="h-10 rounded-xl px-4"
+                          >
+                            <Printer className="mr-2 h-4 w-4" /> Print
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            onClick={downloadEndReportText}
+                            className="h-10 rounded-xl px-4"
+                          >
+                            <Download className="mr-2 h-4 w-4" /> Download
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            onClick={() => void copyEndReportText()}
+                            className="h-10 rounded-xl px-4"
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> Copy
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-2 md:gap-x-6">
+                        <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-xs font-extrabold text-slate-700">Student:</div>
+                          <div className="text-sm text-slate-800">{student.name || "Student"}</div>
+                        </div>
+
+                        <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-xs font-extrabold text-slate-700">Teacher:</div>
+                          <div className="text-sm text-slate-800">{teacherName || ""}</div>
+                        </div>
+
+                        <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-xs font-extrabold text-slate-700">Words Known:</div>
+                          <div className="text-sm text-slate-800">
+                            {progressKnownCount} / {progressTotal}
+                          </div>
+                        </div>
+
+                        <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
+                          <div className="mb-1 text-xs font-extrabold text-slate-700">
+                            Progress Basis:
+                          </div>
+                          <div className="text-sm text-slate-800">
+                            {progressBasis === "through_section"
+                              ? `Up to ${activeSection}`
+                              : progressBasis === "custom_range"
+                                ? `First ${customProgressSections * 100} words`
+                                : "All Fry lists"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 min-h-[340px] border-[3px] border-[#5aaeb4] p-3">
+                        <p className="mb-3 text-[15px] font-extrabold text-slate-700">
+                          Well done! You can read these words:
+                        </p>
+                        <p className="text-sm leading-7 text-slate-800">
+                          {knownWordsForProgress.length
+                            ? knownWordsForProgress.join(", ")
+                            : "No words recorded yet."}
+                        </p>
+                      </div>
+
+                      <div className="relative mt-4 min-h-[250px] border-[3px] border-[#5aaeb4] p-3">
+                        <div className="mb-3 inline-block bg-[#9fc8cd] px-3 py-1 text-xs font-extrabold tracking-[0.2em] text-slate-800">
+                          You can keep working on these words for now.
+                        </div>
+
+                        <p className="max-w-[78%] text-sm leading-7 text-slate-800">
+                          {workingOnWordsForProgress.length
+                            ? workingOnWordsForProgress.join(", ")
+                            : "None at the moment."}
+                        </p>
+
+                        <div className="absolute bottom-3 right-4 h-[150px] w-[150px] rotate-[-12deg] rounded-full border-4 border-slate-500 opacity-80">
+                          <div className="absolute inset-[10px] rounded-full border-[3px] border-slate-500" />
+                          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-2deg] whitespace-nowrap border-4 border-slate-500 bg-white px-3 py-1 text-[22px] font-extrabold text-slate-600">
+                            Well done!
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+
+                    <div
+                      className="h-[48px]"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, #c7d8ea 0 5%, #89a6c5 5% 10%, #c7d8ea 10% 15%, #89a6c5 15% 20%, #c7d8ea 20% 25%, #89a6c5 25% 30%, #c7d8ea 30% 35%, #89a6c5 35% 40%, #c7d8ea 40% 45%, #89a6c5 45% 50%, #c7d8ea 50% 55%, #89a6c5 55% 60%, #c7d8ea 60% 65%, #89a6c5 65% 70%, #c7d8ea 70% 75%, #89a6c5 75% 80%, #c7d8ea 80% 85%, #89a6c5 85% 90%, #c7d8ea 90% 95%, #89a6c5 95% 100%)",
+                      }}
+                    />
+                  </Card>
+                ) : null}
+
+                <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+                  <CardHeader className="p-5 pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <CardTitle className="text-[28px] font-semibold text-slate-900">
+                        Assessment history
+                      </CardTitle>
+
                       <Button
-                        onClick={openEndReportPrintWindow}
-                        className="h-10 rounded-xl px-4"
-                      >
-                        <Printer className="mr-2 h-4 w-4" /> Print
-                      </Button>
-
-                      <Button
+                        id="tour-progress-graph"
                         variant="outline"
-                        onClick={downloadEndReportText}
                         className="h-10 rounded-xl px-4"
+                        onClick={handleOpenGraph}
                       >
-                        <Download className="mr-2 h-4 w-4" /> Download
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        onClick={() => void copyEndReportText()}
-                        className="h-10 rounded-xl px-4"
-                      >
-                        <Copy className="mr-2 h-4 w-4" /> Copy
+                        <LineChartIcon className="mr-2 h-4 w-4" />
+                        Open Progress Graph
                       </Button>
                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-2 md:gap-x-6">
-                    <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-xs font-extrabold text-slate-700">Student:</div>
-                      <div className="text-sm text-slate-800">{student.name || "Student"}</div>
-                    </div>
-
-                    <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-xs font-extrabold text-slate-700">Teacher:</div>
-                      <div className="text-sm text-slate-800">{teacherName || ""}</div>
-                    </div>
-
-                    <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-xs font-extrabold text-slate-700">Words Known:</div>
-                      <div className="text-sm text-slate-800">
-                        {progressKnownCount} / {progressTotal}
+                  <CardContent className="p-5">
+                    {student.history.length === 0 ? (
+                      <p className="text-sm text-slate-500">No saved assessments yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {student.history.map((item, i) => (
+                          <div key={i} className="rounded-2xl border border-slate-200 p-4 text-sm">
+                            <strong>{item.date}</strong>
+                            <div className="mt-2">Secure: {item.secureCount}</div>
+                            <div>Developing: {item.developingCount}</div>
+                            <div>Unknown: {item.unknownCount}</div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-
-                    <div className="min-h-[52px] border-[3px] border-[#5aaeb4] p-3">
-                      <div className="mb-1 text-xs font-extrabold text-slate-700">
-                        Progress Basis:
-                      </div>
-                      <div className="text-sm text-slate-800">
-                        {progressBasis === "through_section"
-                          ? `Up to ${activeSection}`
-                          : progressBasis === "custom_range"
-                          ? `First ${customProgressSections * 100} words`
-                          : "All Fry lists"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 min-h-[340px] border-[3px] border-[#5aaeb4] p-3">
-                    <p className="mb-3 text-[15px] font-extrabold text-slate-700">
-                      Well done! You can read these words:
-                    </p>
-                    <p className="text-sm leading-7 text-slate-800">
-                      {knownWordsForProgress.length
-                        ? knownWordsForProgress.join(", ")
-                        : "No words recorded yet."}
-                    </p>
-                  </div>
-
-                  <div className="relative mt-4 min-h-[250px] border-[3px] border-[#5aaeb4] p-3">
-                    <div className="mb-3 inline-block bg-[#9fc8cd] px-3 py-1 text-xs font-extrabold tracking-[0.2em] text-slate-800">
-                      You can keep working on these words for now.
-                    </div>
-
-                    <p className="max-w-[78%] text-sm leading-7 text-slate-800">
-                      {workingOnWordsForProgress.length
-                        ? workingOnWordsForProgress.join(", ")
-                        : "None at the moment."}
-                    </p>
-
-                    <div className="absolute bottom-3 right-4 h-[150px] w-[150px] rotate-[-12deg] rounded-full border-4 border-slate-500 opacity-80">
-                      <div className="absolute inset-[10px] rounded-full border-[3px] border-slate-500" />
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-2deg] whitespace-nowrap border-4 border-slate-500 bg-white px-3 py-1 text-[22px] font-extrabold text-slate-600">
-                        Well done!
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-
-                <div
-                  className="h-[48px]"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #c7d8ea 0 5%, #89a6c5 5% 10%, #c7d8ea 10% 15%, #89a6c5 15% 20%, #c7d8ea 20% 25%, #89a6c5 25% 30%, #c7d8ea 30% 35%, #89a6c5 35% 40%, #c7d8ea 40% 45%, #89a6c5 45% 50%, #c7d8ea 50% 55%, #89a6c5 55% 60%, #c7d8ea 60% 65%, #89a6c5 65% 70%, #c7d8ea 70% 75%, #89a6c5 75% 80%, #c7d8ea 80% 85%, #89a6c5 85% 90%, #c7d8ea 90% 95%, #89a6c5 95% 100%)",
-                  }}
-                />
-              </Card>
-            ) : null}
-
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <CardHeader className="p-5 pb-0">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <CardTitle className="text-[28px] font-semibold text-slate-900">
-                    Assessment history
-                  </CardTitle>
-
-                  <Button
-                    variant="outline"
-                    className="h-10 rounded-xl px-4"
-                    onClick={handleOpenGraph}
-                  >
-                    <LineChartIcon className="mr-2 h-4 w-4" />
-                    Open Progress Graph
-                  </Button>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-5">
-                {student.history.length === 0 ? (
-                  <p className="text-sm text-slate-500">No saved assessments yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {student.history.map((item, i) => (
-                      <div key={i} className="rounded-2xl border border-slate-200 p-4 text-sm">
-                        <strong>{item.date}</strong>
-                        <div className="mt-2">Secure: {item.secureCount}</div>
-                        <div>Developing: {item.developingCount}</div>
-                        <div>Unknown: {item.unknownCount}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
-        </div>
       </div>
     </div>
   );
