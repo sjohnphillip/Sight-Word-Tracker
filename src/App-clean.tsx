@@ -723,6 +723,7 @@ export default function App() {
   const [customProgressSections, setCustomProgressSections] = useState(1);
   const [statusMessage, setStatusMessage] = useState("");
 
+  const [showReportPreview, setShowReportPreview] = useState(false);
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -1788,22 +1789,24 @@ const startTour = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-              <Button onClick={() => setQuickMode((v) => !v)} className="h-11 rounded-2xl px-5">
-                <Zap className="mr-2 h-4 w-4" />
-                {quickMode ? "Grid" : "Quick Assess"}
-              </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+             <Button
+  onClick={() => setQuickMode((v) => !v)}
+  className="h-11 px-4 w-full rounded-2xl sm:w-auto"
+>
+  {quickMode ? "Grid" : "Quick Assess"}
+</Button>
 
               
 
-              <Button
-                variant="outline"
-                onClick={openParentReportPopup}
-                className="h-11 rounded-2xl px-5"
-              >
-                
-                Progress Report
-              </Button>
+
+<Button
+  variant="outline"
+  onClick={() => setShowReportPreview(true)}
+  className="h-11 w-full rounded-2xl px-5 sm:w-auto"
+>
+  Progress Report
+</Button>
 
               <Button
                 variant="outline"
@@ -1827,7 +1830,7 @@ const startTour = () => {
         <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
           {/* LEFT */}
           <div className="space-y-5">
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <Card id="tour-student-controls" className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
                 <CardTitle className="text-[28px] font-semibold text-slate-900">
                   Progress overview
@@ -1918,7 +1921,7 @@ const startTour = () => {
                         >
                           <div className="flex items-center justify-between gap-2">
                             <h3 className="font-semibold">
-                              {`${studentNumberMap.get(s.id)}. ${s.name}`}
+                              {s.name}
                             </h3>
                             <Badge
                               className={
@@ -2194,7 +2197,7 @@ const startTour = () => {
 
                     <div id="tour-word-grid">
                       <ScrollArea className="h-[560px] pr-3">
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                           {filteredWords.map((word) => {
                             const mastery = student.mastery?.[activeSection]?.[word];
                             const inPracticeList = (student.selectedPracticeWords || []).includes(
@@ -2272,7 +2275,7 @@ const startTour = () => {
 
           {/* RIGHT */}
           <div className="space-y-5">
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+           <Card id="tour-practice-list" className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle className="text-[28px] font-semibold text-slate-900">
@@ -2388,6 +2391,36 @@ const startTour = () => {
                 </CardContent>
               </Card>
             ) : null}
+            {showReportPreview && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+
+      <h2 className="text-xl font-semibold mb-4">
+        Progress Report
+      </h2>
+
+      <p className="mb-2">
+        Words Known: {progressKnownCount}
+      </p>
+
+      <p className="mb-2">
+        Total Words: {progressTotal}
+      </p>
+
+      <p className="mb-4">
+        Progress: {progressPercent}%
+      </p>
+
+      <Button
+        onClick={() => setShowReportPreview(false)}
+        className="w-full rounded-xl"
+      >
+        Close
+      </Button>
+
+    </div>
+  </div>
+  )}
           </div>
         </div>
       </div>
