@@ -108,9 +108,10 @@ function createStudent(): Student {
 
 function countKnown(student?: Student, allowedWords?: Set<string>) {
   if (!student) return 0;
-  return Object.values(student.known)
+
+  return Object.values(student.mastery)
     .flatMap((section) => Object.entries(section || {}))
-    .filter(([word, value]) => Boolean(value) && (!allowedWords || allowedWords.has(word)))
+    .filter(([word, value]) => value === "secure" && (!allowedWords || allowedWords.has(word)))
     .length;
 }
 
@@ -183,7 +184,7 @@ function buildPopupShell(title: string, bodyHtml: string, extraStyles = "") {
   <meta charset="utf-8" />
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Comic Neue', cursive, Arial, sans-serif;
       margin: 0;
       padding: 24px;
       background: #f8fafc;
@@ -217,18 +218,99 @@ function buildPopupShell(title: string, bodyHtml: string, extraStyles = "") {
       background: #f8fafc;
     }
     @media print {
-      body {
-        background: white;
-        padding: 0;
-      }
-      .page {
-        border: none;
-        max-width: none;
-      }
-      .actions {
-        display: none;
-      }
-    }
+  @page {
+    size: A4;
+    margin: 6mm;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  .page {
+    page-break-inside: avoid;
+  }
+}
+
+  .page {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 8mm;
+    border: none;
+    box-sizing: border-box;
+    transform: scale(0.92);
+    transform-origin: top center;
+  }
+
+  .pattern {
+    height: 28px;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: 26px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    margin: 4px 0 8px;
+  }
+
+  .details {
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .field {
+    min-height: 22px;
+    padding: 5px 7px;
+    font-size: 11px;
+  }
+
+  .word-box {
+    min-height: 85px;
+    padding: 7px;
+    margin-bottom: 6px;
+    font-size: 10px;
+  }
+
+  .words {
+    font-size: 9px;
+    line-height: 1.25;
+  }
+
+  .bar {
+    padding: 4px;
+    margin: 5px 0;
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+
+  .practice-title {
+    font-size: 12px;
+    margin: 4px 0;
+  }
+
+  .practice-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .cell {
+    height: 40px;
+  }
+
+ .actions {
+  margin-top: 10px;
+}
+
+@media print {
+  .actions {
+    display: none;
+  }
+}
     ${extraStyles}
   </style>
 </head>
@@ -441,7 +523,7 @@ function openClassSummaryWindow(
   <title>Class Summary Sheet</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Comic Neue', cursive, Arial, sans-serif;
       margin: 0;
       padding: 24px;
       background: #f8fafc;
@@ -533,7 +615,7 @@ function openClassSummaryWindow(
           </tr>
         </thead>
         <tbody>
-          ${rows || `<tr><td colspan="6">No named students yet.</td></tr>`}
+          ${rows || '<tr><td colspan="6">No named students yet.</td></tr>'}
         </tbody>
       </table>
 
@@ -567,7 +649,7 @@ function openStudentProgressGraphWindow(student: Student, progressTotal: number)
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Comic Neue', cursive, Arial, sans-serif;
       margin: 0;
       padding: 24px;
       background: #f8fafc;
@@ -709,6 +791,7 @@ export default function App() {
   const [teacherName, setTeacherName] = useState("");
   const [students, setStudents] = useState<Student[]>([createStudent()]);
   const [selectedId, setSelectedId] = useState("");
+  const [hasSelectedStudent, setHasSelectedStudent] = useState(false);
   const [activeSection, setActiveSection] = useState(SECTIONS[0]);
   const [search, setSearch] = useState("");
   const [quickMode, setQuickMode] = useState(false);
@@ -721,7 +804,10 @@ export default function App() {
   const [practiceCount, setPracticeCount] = useState<10 | 20>(20);
   const [progressBasis, setProgressBasis] = useState<ProgressBasis>("all");
   const [customProgressSections, setCustomProgressSections] = useState(1);
+  const [customStartSection, setCustomStartSection] = useState(SECTIONS[0]);
+const [customEndSection, setCustomEndSection] = useState(SECTIONS[0]);
   const [statusMessage, setStatusMessage] = useState("");
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   const [showReportPreview, setShowReportPreview] = useState(false);
   useEffect(() => {
@@ -836,15 +922,27 @@ export default function App() {
   }, [activeSection, search]);
 
   const progressWords = useMemo(() => {
-    if (progressBasis === "through_section") return getWordsThroughSection(activeSection);
-    if (progressBasis === "custom_range") return getWordsThroughCount(customProgressSections);
+    if (progressBasis === "through_section") {
+  return fryLists[activeSection] || [];
+}
+    if (progressBasis === "custom_range") {
+  const startIndex = SECTIONS.indexOf(customStartSection);
+  const endIndex = SECTIONS.indexOf(customEndSection);
+
+  const from = Math.min(startIndex, endIndex);
+  const to = Math.max(startIndex, endIndex);
+
+  return SECTIONS.slice(from, to + 1).flatMap((section) => fryLists[section] || []);
+}
     return allWords;
-  }, [activeSection, customProgressSections, progressBasis, allWords]);
+  }, [activeSection, customStartSection, customEndSection, progressBasis, allWords]);
 
   const progressWordSet = useMemo(() => new Set(progressWords), [progressWords]);
   const progressKnownCount = student ? countKnown(student, progressWordSet) : 0;
-  const progressTotal = progressWords.length || 1;
-  const progressPercent = student ? Math.round((progressKnownCount / progressTotal) * 100) : 0;
+  const progressTotal = progressWords.length;
+  const progressPercent = student && progressTotal > 0
+  ? Math.round((progressKnownCount / progressTotal) * 100)
+  : 0;
 
   const studentNumberMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -914,8 +1012,13 @@ export default function App() {
     setStatusMessage("Student deleted.");
   };
 
-  const setMastery = (word: string, section: string, level: MasteryLevel) => {
-    if (!student) return;
+   const setMastery = (word: string, section: string, level: MasteryLevel) => {
+   if (!hasSelectedStudent) {
+  setStatusMessage("Please select a student before tracking words.");
+setShowStatusModal(true);
+  return;
+}
+if (!student) return;
 
     updateStudent({
       mastery: {
@@ -1151,13 +1254,7 @@ export default function App() {
       `Student: ${student.name || "Student"}`,
       `Teacher: ${teacherName || ""}`,
       `Words known: ${progressKnownCount} / ${progressTotal}`,
-      `Progress basis: ${
-        progressBasis === "through_section"
-          ? `up to ${activeSection}`
-          : progressBasis === "custom_range"
-            ? `first ${customProgressSections * 100} words`
-            : "all Fry lists"
-      }`,
+      `Progress basis: ${getProgressBasisLabel()}`,
       "",
       "Words to Practise",
       getPracticeWords().length ? getPracticeWords().join(", ") : "No words selected yet.",
@@ -1291,39 +1388,225 @@ export default function App() {
   };
 
   const openPracticeListPopup = () => {
-    if (!student) return;
-    const practiceWords = getPracticeWords();
-    const wordsText = practiceWords.length
-      ? escapeHtml(practiceWords.join(", "))
-      : "No words selected yet.";
+  if (!student) return;
 
-    const body = `
-      <div style="padding: 26px 30px;">
-        <h1 style="margin:0 0 8px 0;font-size:34px;">Home Practice List</h1>
-        <p style="margin:0 0 18px 0;color:#475569;">A simple list of words to send home for extra practice.</p>
+  const words = getPracticeWords();
+const studentDisplayName = student.name || "Student";
+  const teacherDisplayName = teacherName || "Teacher";
 
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
-          <div style="border:1px solid #e2e8f0;border-radius:16px;padding:12px 14px;background:#f8fafc;"><strong>Student:</strong> ${escapeHtml(student.name || "Student")}</div>
-          <div style="border:1px solid #e2e8f0;border-radius:16px;padding:12px 14px;background:#f8fafc;"><strong>Teacher:</strong> ${escapeHtml(teacherName || "")}</div>
-          <div style="border:1px solid #e2e8f0;border-radius:16px;padding:12px 14px;background:#f8fafc;"><strong>Words:</strong> ${practiceWords.length}</div>
+  const wordRows = words
+    .map(
+      (word, index) => `
+        <div class="word-block">
+          <div class="word-title">
+            <span class="number">${index + 1}.</span>
+            <span class="word">${String(word)}</span>
+          </div>
+
+          <div class="lines">
+            <div class="line"></div>
+            <div class="line"></div>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+
+  const popup = window.open("", "_blank", "width=850,height=1100");
+  if (!popup) return;
+
+  popup.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Practice List</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&amp;display=swap" rel="stylesheet">   
+
+        <style>
+          body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Neue', cursive, Arial, sans-serif;
+            color: #111827;
+            background: white;
+          }
+
+          h1, .subheading {
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-align: center;
+          }
+
+          h1 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+}
+
+          .subheading {
+            margin-bottom: 12px;
+            font-size: 14px;
+          }
+
+          .page {
+  max-width: 800px;
+  margin: 0 auto;
+  border: 2px solid #111827;
+  padding: 8px;
+}
+
+          .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            font-size: 13px;
+            margin-bottom: 12px;
+          }
+
+          .note {
+            border: 1px solid #111827;
+            padding: 8px;
+            font-size: 13px;
+            margin-bottom: 14px;
+          }
+
+          .word-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 18px;
+}
+
+          .word-block {
+            page-break-inside: avoid;
+          }
+
+          .word-title {
+            display: flex;
+            gap: 6px;
+            font-weight: bold;
+            margin-bottom: 4px;
+          }
+
+          .lines {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+          }
+
+          .line {
+  border-bottom: 2px solid #111827;
+  height: 13px;
+}
+
+          .footer {
+  margin-top: 6px;
+  padding-top: 8px;
+  font-size: 12px;
+  text-align: center;
+}
+
+          .actions {
+            margin-bottom: 10px;
+          }
+
+          button {
+            padding: 6px 12px;
+            margin-right: 6px;
+            border: 1px solid #111827;
+            background: white;
+            cursor: pointer;
+          }
+
+          .tip {
+            font-size: 12px;
+            margin-bottom: 10px;
+          }
+
+          @media print {
+            .actions, .tip {
+              display: none;
+            }
+
+            body {
+              padding: 0;
+            }
+
+            .page {
+              border: 2px solid #111827;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+
+        <div class="actions">
+          <button onclick="window.print()">Print</button>
+          <button onclick="window.close()">Close</button>
         </div>
 
-        <div style="border:3px solid #5aaeb4;border-radius:22px;padding:18px;min-height:220px;background:
-          linear-gradient(to bottom, transparent 31px, #e8f2f3 32px);
-          background-size:100% 32px;">
-          <div style="font-size:15px;line-height:1.8;white-space:pre-wrap;word-break:break-word;">${wordsText}</div>
+        <div class="tip">
+          Tip: Turn off headers/footers for best results. This sheet is designed to print clearly even with background graphics off.
         </div>
-      </div>
-    `;
 
-    openHtmlWindow(
-      "Home Practice List",
-      buildPopupShell("Home Practice List", body),
-      960,
-      760
-    );
-  };
+        <div class="page">
+          <h1>PRACTICE LIST</h1>
+          <div class="subheading">SPELLINGS FOR HOME</div>
 
+          <div class="details">
+            <div><strong>Student:</strong> ${studentDisplayName}</div>
+            <div><strong>Teacher:</strong> ${teacherDisplayName}</div>
+            <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
+            <div><strong>Words:</strong> ${words.length}</div>
+          </div>
+
+          <div class="note">
+            Practise reading and writing each word. Read, Say, Cover, Write and Check.
+          </div>
+
+          <div class="word-list">
+            ${wordRows}
+          </div>
+
+          <div class="footer">
+            A little practice every day builds strong readers.
+          </div>
+        </div>
+
+      </body>
+    </html>
+  `);
+
+  popup.document.close();
+};
+ 
+
+  const getProgressBasisLabel = () => {
+  const suffix = (n: number) =>
+    n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
+
+  if (progressBasis === "all") {
+    return "1000 words";
+  }
+
+  if (progressBasis === "through_section") {
+    const sectionNumber = SECTIONS.indexOf(activeSection) + 1;
+    return `${sectionNumber}${suffix(sectionNumber)} 100`;
+  }
+
+  if (progressBasis === "custom_range") {
+    const startIndex = SECTIONS.indexOf(customStartSection);
+    const endIndex = SECTIONS.indexOf(customEndSection);
+
+    const from = Math.min(startIndex, endIndex) + 1;
+    const to = Math.max(startIndex, endIndex) + 1;
+
+    return `${from}${suffix(from)} 100 to ${to}${suffix(to)} 100 words`;
+  }
+
+  return "";
+};        
   const openParentReportPopup = () => {
     if (!student) return;
 
@@ -1331,15 +1614,10 @@ export default function App() {
       ? escapeHtml(getPracticeWords().join(", "))
       : "No words selected yet.";
 
-    const basisText =
-      progressBasis === "through_section"
-        ? `Up to ${activeSection}`
-        : progressBasis === "custom_range"
-          ? `First ${customProgressSections * 100} words`
-          : "All Fry lists";
+    const basisText = getProgressBasisLabel();
 
     const body = `
-      <div class="pattern"></div>
+      
       <div class="inner">
         <h1 class="title">SIGHT WORD RECORD</h1>
         <div class="subtitle">PROGRESS REPORT</div>
@@ -1483,15 +1761,10 @@ export default function App() {
       ? escapeHtml(workingOnWordsForProgress.join(", "))
       : "None at the moment.";
 
-    const basisText =
-      progressBasis === "through_section"
-        ? `Up to ${activeSection}`
-        : progressBasis === "custom_range"
-          ? `First ${customProgressSections * 100} words`
-          : "All Fry lists";
+    const basisText = getProgressBasisLabel();
 
     const body = `
-      <div class="pattern"></div>
+      
       <div class="inner">
         <p class="top-label">END REPORT</p>
         <h1 class="title">SPELLING RECORD</h1>
@@ -1513,7 +1786,7 @@ export default function App() {
           </div>
 
           <div class="field">
-            <div class="field-label">Progress Basis:</div>
+            <div class="field-label">Words being learned:</div>
             <div class="field-value">${escapeHtml(basisText)}</div>
           </div>
         </div>
@@ -1527,13 +1800,10 @@ export default function App() {
           <div class="lower-label">You can keep working on these words for now.</div>
           <div class="lower-text">${keepWorkingText}</div>
 
-          <div class="stamp">
-            <div class="stamp-banner">Well done!</div>
-          </div>
-        </div>
-      </div>
+          
 
-      <div class="bottom-pattern"></div>
+     
+
     `;
 
     const styles = `
@@ -1562,32 +1832,7 @@ export default function App() {
             #c7d8ea 90% 95%,
             #89a6c5 95% 100%);
       }
-      .bottom-pattern {
-        height: 48px;
-        margin-top: 22px;
-        background:
-          linear-gradient(90deg,
-            #c7d8ea 0 5%,
-            #89a6c5 5% 10%,
-            #c7d8ea 10% 15%,
-            #89a6c5 15% 20%,
-            #c7d8ea 20% 25%,
-            #89a6c5 25% 30%,
-            #c7d8ea 30% 35%,
-            #89a6c5 35% 40%,
-            #c7d8ea 40% 45%,
-            #89a6c5 45% 50%,
-            #c7d8ea 50% 55%,
-            #89a6c5 55% 60%,
-            #c7d8ea 60% 65%,
-            #89a6c5 65% 70%,
-            #c7d8ea 70% 75%,
-            #89a6c5 75% 80%,
-            #c7d8ea 80% 85%,
-            #89a6c5 85% 90%,
-            #c7d8ea 90% 95%,
-            #89a6c5 95% 100%);
-      }
+      
       .inner {
         padding: 18px 34px 0 34px;
         position: relative;
@@ -1832,9 +2077,28 @@ const startTour = () => {
           <div className="space-y-5">
             <Card id="tour-student-controls" className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
-                <CardTitle className="text-[28px] font-semibold text-slate-900">
-                  Progress overview
-                </CardTitle>
+               <CardTitle className="text-[28px] font-semibold text-slate-900">
+  Progress overview
+</CardTitle>
+
+<p className="text-sm text-slate-500 mt-1">
+  {progressBasis === "all" && "Tracking: All 1000 words"}
+  {progressBasis === "through_section" &&
+    `Tracking: ${SECTIONS.indexOf(activeSection) + 1}${["st","nd","rd"][SECTIONS.indexOf(activeSection)] || "th"} 100 (100 words)`
+  }
+  {progressBasis === "custom_range" && (() => {
+    const start = SECTIONS.indexOf(customStartSection);
+    const end = SECTIONS.indexOf(customEndSection);
+    const from = Math.min(start, end);
+    const to = Math.max(start, end);
+    const total = (to - from + 1) * 100;
+
+    const suffix = (n: number) =>
+      n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
+
+    return `Tracking: ${from + 1}${suffix(from + 1)}–${to + 1}${suffix(to + 1)} 100 (${total} words)`;
+  })()}
+</p>
               </CardHeader>
               <CardContent className="space-y-4 p-5">
                 <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-5 ring-1 ring-slate-200">
@@ -1844,13 +2108,65 @@ const startTour = () => {
                       {progressKnownCount}/{progressTotal}
                     </Badge>
                   </div>
-                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-slate-900 to-slate-700"
-                      style={{ width: `${progressPercent}%` }}
-                    />
+                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200 shadow-inner">
+                    <div className="h-full flex overflow-hidden rounded-full">
+  <div
+  className="bg-green-400 transition-all duration-300 first:rounded-l-full"
+  style={{
+    width: `${
+      student
+        ? (countByMastery(student, progressWordSet, "secure") / progressTotal) * 100
+        : 0
+    }%`,
+  }}
+/>
+
+  <div
+  className="bg-amber-300 transition-all duration-300"
+  style={{
+    width: `${
+      student
+        ? (countByMastery(student, progressWordSet, "developing") / progressTotal) * 100
+        : 0
+    }%`,
+  }}
+/>
+
+  <div
+  className="bg-rose-300 transition-all duration-300 last:rounded-r-full"
+  style={{
+    width: `${
+      student
+        ? (countByMastery(student, progressWordSet, "unknown") / progressTotal) * 100
+        : 0
+    }%`,
+  }}
+/>
+</div>
                   </div>
-                  <p className="mt-3 text-sm text-slate-600">{progressPercent}% complete</p>
+                  <p className="mt-3 text-sm text-slate-600">{progressPercent}% secure</p>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-center">
+  <div className="rounded-xl border border-green-200 bg-green-50 p-2">
+    <p className="font-semibold text-green-700">Secure</p>
+    <p className="text-sm font-bold text-green-800">
+      {student ? countByMastery(student, progressWordSet, "secure") : 0}
+    </p>
+  </div>
+
+  <div className="rounded-xl border border-amber-200 bg-amber-50 p-2">
+    <p className="font-semibold text-amber-700">Developing</p>
+    <p className="text-sm font-bold text-amber-800">
+      {student ? countByMastery(student, progressWordSet, "developing") : 0}
+    </p>
+  </div>
+
+  <div className="rounded-xl border border-rose-200 bg-rose-50 p-2">
+  <p className="font-semibold text-rose-700">Unknown</p>
+  <p className="text-sm font-bold text-rose-800">
+    {student ? countByMastery(student, progressWordSet, "unknown") : 0}
+  </p>
+</div>
+</div>
                 </div>
 
                 <Button
@@ -1867,8 +2183,8 @@ const startTour = () => {
                   className="h-11 w-full rounded-2xl"
                   onClick={handleOpenGraph}
                 >
-                  <LineChartIcon className="mr-2 h-4 w-4" />
-                  Open Progress Graph
+                  
+                  Progress Graph
                 </Button>
               </CardContent>
             </Card>
@@ -1886,7 +2202,7 @@ const startTour = () => {
                       onClick={handleOpenClassSummary}
                     >
                       <Table2 className="mr-2 h-4 w-4" />
-                      Open Class Summary
+                       Class Summary
                     </Button>
 
                     <Button
@@ -1908,10 +2224,14 @@ const startTour = () => {
                     .map((s) => {
                       const known = countKnown(s, progressWordSet);
                       const percent = progressTotal ? Math.round((known / progressTotal) * 100) : 0;
+                     
                       return (
                         <button
                           key={s.id}
-                          onClick={() => setSelectedId(s.id)}
+                          onClick={() => {
+  setSelectedId(s.id);
+  setHasSelectedStudent(true);
+}}
                           className={cn(
                             "rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md",
                             s.id === selectedId
@@ -1971,10 +2291,14 @@ const startTour = () => {
   <span className="ml-2 inline-block">Student</span>
 </label>
                     <select
-                      value={selectedId}
-                      onChange={(e) => setSelectedId(e.target.value)}
-                      className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-base"
-                    >
+  value={selectedId}
+  onClick={() => setHasSelectedStudent(true)}
+  onChange={(e) => {
+    setSelectedId(e.target.value);
+    setHasSelectedStudent(true);
+  }}
+  className="h-11 w-full rounded-2xl border border-slate-200"
+>
                       {students.map((s, i) => (
                         <option key={s.id} value={s.id}>
                           {`Student ${i + 1}`}
@@ -2018,31 +2342,50 @@ const startTour = () => {
                       className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
                     >
                       <option value="all">All 1000 words</option>
-                      <option value="through_section">Up to selected level</option>
-                      <option value="custom_range">Custom word range</option>
+<option value="through_section">Selected 100</option>
+<option value="custom_range">Custom range</option>
                     </select>
                   </div>
 
                   {progressBasis === "custom_range" ? (
-                    <div className="min-w-0">
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        Custom range
-                      </label>
-                      <select
-                        value={customProgressSections}
-                        onChange={(e) => setCustomProgressSections(Number(e.target.value))}
-                        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                      >
-                        {SECTIONS.map((section, index) => (
-                          <option key={section} value={index + 1}>
-                            {`First ${(index + 1) * 100} words`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="min-w-0" />
-                  )}
+  <div className="grid gap-2 sm:grid-cols-2 xl:col-span-2">
+    <div className="min-w-0">
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        Start level
+      </label>
+      <select
+        value={customStartSection}
+        onChange={(e) => setCustomStartSection(e.target.value)}
+        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
+      >
+        {SECTIONS.map((section, index) => (
+          <option key={section} value={section}>
+            {` ${index + 1}${index === 0 ? "st" : index === 1 ? "nd" : index === 2 ? "rd" : "th"} 100`}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div className="min-w-0">
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        End level
+      </label>
+      <select
+        value={customEndSection}
+        onChange={(e) => setCustomEndSection(e.target.value)}
+        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
+      >
+        {SECTIONS.map((section, index) => (
+          <option key={section} value={section}>
+            {` ${index + 1}${index === 0 ? "st" : index === 1 ? "nd" : index === 2 ? "rd" : "th"} 100`}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+) : (
+  <div className="min-w-0" />
+)}
 
                   <div className="flex items-end gap-3 xl:col-span-2">
                     <Button
@@ -2218,13 +2561,19 @@ const startTour = () => {
 
                                 <div className="mt-4 flex flex-wrap gap-2">
                                   <button
-                                    onClick={() => setMastery(word, activeSection, "secure")}
+                                   onClick={() => {
+  
+
+  setMastery(word, activeSection, "secure");
+}}
+
                                     className={cn(
-                                      "min-w-[96px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150",
-                                      mastery === "secure"
-                                        ? "border-green-500 bg-green-500 text-white"
-                                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                                    )}
+  "min-w-[96px] flex-1 rounded-2xl border px-3 py-3 text-center",
+  mastery === "secure"
+    ? "border-green-500 bg-green-500 text-white"
+    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100",
+  !selectedId && "opacity-50 cursor-not-allowed"
+)}
                                   >
                                     Secure
                                   </button>
@@ -2279,7 +2628,7 @@ const startTour = () => {
               <CardHeader className="p-5 pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle className="text-[28px] font-semibold text-slate-900">
-                    Home Practice List
+                  Practice List
                   </CardTitle>
                  
                 </div>
@@ -2288,7 +2637,7 @@ const startTour = () => {
               <CardContent className="space-y-4 p-5">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Practice mode
+                    Practice List Choice
                   </label>
                   <select
                     value={practiceMode}
@@ -2333,11 +2682,14 @@ const startTour = () => {
                   </select>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-700">
-                  {getPracticeWords().length
-                    ? getPracticeWords().join(", ")
-                    : "No words selected yet."}
-                </div>
+                <div className="rounded-2xl border border-teal-500 bg-white p-4 text-sm">
+  <p className="font-semibold">You’re doing great! Please practise these words.</p>
+  <p className="mt-3 leading-7">
+    {getPracticeWords().length
+      ? getPracticeWords().join(", ")
+      : "No words selected yet."}
+  </p>
+</div>
 
                 <Button
   variant="outline"
@@ -2345,7 +2697,7 @@ const startTour = () => {
   className="h-10 w-full rounded-xl"
 >
   
-  Open Practice List
+  Practice List
 </Button>
               </CardContent>
             </Card>
@@ -2424,6 +2776,20 @@ const startTour = () => {
           </div>
         </div>
       </div>
+      {showStatusModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="bg-white rounded-2xl shadow-xl p-6 w-[320px] text-center">
+      <p className="text-slate-800 text-sm mb-4">{statusMessage}</p>
+
+      <button
+        onClick={() => setShowStatusModal(false)}
+        className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
