@@ -36,6 +36,7 @@ type HistoryEntry = {
 type Student = {
   id: string;
   name: string;
+  studentNumber: number;
   known: Record<string, Record<string, boolean>>;
   mastery: Record<string, Record<string, MasteryLevel>>;
   history: HistoryEntry[];
@@ -98,6 +99,7 @@ function createStudent(): Student {
   return {
     id: crypto.randomUUID(),
     name: "",
+    studentNumber: Date.now(), // unique stable number
     known: {},
     mastery: {},
     history: [],
@@ -808,7 +810,7 @@ export default function App() {
 const [customEndSection, setCustomEndSection] = useState(SECTIONS[0]);
   const [statusMessage, setStatusMessage] = useState("");
   const [showStatusModal, setShowStatusModal] = useState(false);
-
+const [draftStudentName, setDraftStudentName] = useState("");
   const [showReportPreview, setShowReportPreview] = useState(false);
   useEffect(() => {
     try {
@@ -2312,12 +2314,11 @@ const startTour = () => {
   <span className="ml-2 inline-block">Name</span>
 </label>
                     <Input
-                      value={student.name}
-                      onChange={(e) => updateStudent({ name: e.target.value })}
-                      className="h-11 w-full rounded-2xl text-base"
-                    />
-                  </div>
-
+  value={draftStudentName}
+  onChange={(e) => setDraftStudentName(e.target.value)}
+  className="h-11 w-full rounded-2xl text-base"
+/>
+</div>
                   <div className="min-w-0">
                     <label className="mb-2 block text-sm font-medium text-slate-700">
   <span className="ml-2 inline-block">Search</span>
@@ -2393,9 +2394,10 @@ const startTour = () => {
   onClick={() => {
     if (!student) return;
 
-    const trimmedName = student.name.trim();
+   const trimmedName = draftStudentName.trim();
     if (!trimmedName) {
       setStatusMessage("Enter a student name before adding.");
+      setShowStatusModal(true);
       return;
     }
 
