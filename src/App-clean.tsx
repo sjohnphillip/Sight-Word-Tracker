@@ -799,6 +799,7 @@ export default function App() {
   const [quickMode, setQuickMode] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("az");
   const [quickIndex, setQuickIndex] = useState(0);
+const [quickFeedback, setQuickFeedback] = useState<"secure" | "developing" | "unknown" | null>(null);
   const [hasRunTour, setHasRunTour] = useState(false);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>("automatic");
   const [autoPracticeStrategy, setAutoPracticeStrategy] =
@@ -1015,9 +1016,9 @@ const [draftStudentName, setDraftStudentName] = useState("");
   };
 
    const setMastery = (word: string, section: string, level: MasteryLevel) => {
-   if (!hasSelectedStudent) {
+  if (students.length === 0 || !hasSelectedStudent) {
   setStatusMessage("Please select a student before tracking words.");
-setShowStatusModal(true);
+  setShowStatusModal(true);
   return;
 }
 if (!student) return;
@@ -1041,7 +1042,11 @@ if (!student) return;
   };
 
   const toggleWord = (word: string, section: string) => {
-    if (!student) return;
+    if (!hasSelectedStudent) {
+  setStatusMessage("Please select a student before tracking words.");
+  setShowStatusModal(true);
+  return;
+}
     const next = !student.known?.[section]?.[word];
     setMastery(word, section, next ? "secure" : "unknown");
   };
@@ -1241,13 +1246,42 @@ if (!student) return;
     setStatusMessage("Assessment saved.");
   };
 
-  const nextQuickWord = (correct: boolean) => {
-    const word = allWords[quickIndex];
-    const section = SECTIONS.find((name) => fryLists[name].includes(word)) || SECTIONS[0];
-    setMastery(word, section, correct ? "secure" : "unknown");
+ const nextQuickWord = (status: "secure" | "developing" | "unknown") => {
+  if (students.length === 0 || !hasSelectedStudent) {
+  setStatusMessage("Please select a student before using Quick Assess.");
+  setShowStatusModal(true);
+  return;
+}
+
+  const word = allWords[quickIndex];
+  const section =
+    SECTIONS.find((name) => fryLists[name].includes(word)) || SECTIONS[0];
+
+  setQuickFeedback(status);
+  setMastery(word, section, status);
+
+  setTimeout(() => {
+    setQuickFeedback(null);
     setQuickIndex((prev) => (prev + 1) % allWords.length);
+  }, 120);
+};
+useEffect(() => {
+  if (!quickMode) return;
+
+  const handleKeyDown = (event: any) => {
+    const key = event.key.toLowerCase();
+
+    if (key === "s") nextQuickWord("secure");
+    if (key === "d") nextQuickWord("developing");
+    if (key === "u") nextQuickWord("unknown");
   };
 
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+}, [quickMode, nextQuickWord]);
   const buildReportText = () => {
     if (!student) return "";
     return [
@@ -2470,28 +2504,48 @@ const startTour = () => {
 
               <CardContent className="space-y-4 p-5">
                 {quickMode ? (
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-center">
+                  <div
+  className={`rounded-3xl border p-6 text-center transition duration-150 ${
+    quickFeedback === "secure"
+      ? "border-green-300 bg-green-50"
+      : quickFeedback === "developing"
+      ? "border-orange-300 bg-orange-50"
+      : quickFeedback === "unknown"
+      ? "border-red-300 bg-red-50"
+      : "border-slate-200 bg-slate-50"
+  }`}
+>
                     <p className="text-sm uppercase tracking-[0.18em] text-slate-500">
                       Quick assess
                     </p>
                     <h3 className="mt-3 text-3xl font-bold text-slate-900">
                       {allWords[quickIndex]}
                     </h3>
-                    <div className="mt-6 flex justify-center gap-3">
-                      <Button
-                        onClick={() => nextQuickWord(true)}
-                        className="h-11 rounded-2xl px-6"
-                      >
-                        Secure
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => nextQuickWord(false)}
-                        className="h-11 rounded-2xl px-6"
-                      >
-                        Unknown
-                      </Button>
-                    </div>
+                 <div className="mt-6 flex flex-wrap justify-center gap-3">
+  <Button
+    type="button"
+    onClick={() => nextQuickWord("secure")}
+    className="!h-11 !rounded-2xl !px-6 !bg-green-100 !text-green-700 !border !border-green-300 hover:!bg-green-200"
+  >
+    Secure
+  </Button>
+
+  <Button
+    type="button"
+    onClick={() => nextQuickWord("developing")}
+    className="!h-11 !rounded-2xl !px-6 !bg-orange-100 !text-orange-700 !border !border-orange-300 hover:!bg-orange-200"
+  >
+    Developing
+  </Button>
+
+  <Button
+    type="button"
+    onClick={() => nextQuickWord("unknown")}
+    className="!h-11 !rounded-2xl !px-6 !bg-red-100 !text-red-700 !border !border-red-300 hover:!bg-red-200"
+  >
+    Unknown
+  </Button>
+</div>
                   </div>
                 ) : (
                   <>
@@ -2555,9 +2609,11 @@ const startTour = () => {
                                 className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
                               >
                                 <button
-                                  onClick={() => toggleWord(word, activeSection)}
-                                  className="min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 text-left text-[28px] font-semibold text-slate-800"
-                                >
+  onClick={() => toggleWord(word, activeSection)}
+  disabled={!hasSelectedStudent}
+  className={`min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 text-left text-[28px] font-semibold text-slate-800 
+    `}
+>
                                   {word}
                                 </button>
 
