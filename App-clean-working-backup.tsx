@@ -2137,7 +2137,7 @@ const startTour = () => {
 </p>
               </CardHeader>
               <CardContent className="space-y-4 p-5">
-                <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-3 sm:p-5 ring-1 ring-slate-200">
+                <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-5 ring-1 ring-slate-200">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-slate-900">Overall progress</span>
                     <Badge>
@@ -2611,7 +2611,8 @@ const startTour = () => {
                                 <button
   onClick={() => toggleWord(word, activeSection)}
   disabled={!hasSelectedStudent}
-  className="min-h-[58px] sm:min-h-[88px] w-full rounded-xl sm:rounded-2xl border border-slate-200 bg-slate-50 px-3 sm:px-5 py-3 sm:py-5 text-left text-lg sm:text-[28px] font-semibold text-slate-800"
+  className={`min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 text-left text-[28px] font-semibold text-slate-800 
+    `}
 >
                                   {word}
                                 </button>
