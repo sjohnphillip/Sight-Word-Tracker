@@ -2055,7 +2055,7 @@ const startTour = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-4 md:px-6 md:py-6">
-      <div className="mx-auto max-w-[1600px] space-y-5">
+      <div className="mx-auto max-w-full space-y-4 px-1 sm:px-0">
         <div
           id="tour-header"
           className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm md:p-7"
@@ -2070,10 +2070,10 @@ const startTour = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="flex flex-wrap gap-2">
              <Button
   onClick={() => setQuickMode((v) => !v)}
-  className="h-11 px-4 w-full rounded-2xl sm:w-auto"
+  className="h-9 rounded-xl px-3 text-sm sm:h-11 sm:px-5 sm:text-base"
 >
   {quickMode ? "Grid" : "Quick Assess"}
 </Button>
@@ -2084,7 +2084,7 @@ const startTour = () => {
 <Button
   variant="outline"
   onClick={() => setShowReportPreview(true)}
-  className="h-11 w-full rounded-2xl px-5 sm:w-auto"
+  className="h-9 rounded-xl px-3 text-sm sm:h-11 sm:px-5 sm:text-base"
 >
   Progress Report
 </Button>
@@ -2092,7 +2092,7 @@ const startTour = () => {
               <Button
                 variant="outline"
                 onClick={openEndReportPopup}
-                className="h-11 rounded-2xl px-5"
+                className="h-9 rounded-xl px-3 text-sm sm:h-11 sm:px-5 sm:text-base"
               >
                 End Report
               </Button>
@@ -2100,7 +2100,7 @@ const startTour = () => {
               <Button
                 variant="outline"
                 onClick={startTour}
-                className="h-11 rounded-2xl px-5"
+                className="h-9 rounded-xl px-3 text-sm sm:h-11 sm:px-5 sm:text-base"
               >
                 Help / Tour
               </Button>
@@ -2136,16 +2136,16 @@ const startTour = () => {
   })()}
 </p>
               </CardHeader>
-              <CardContent className="space-y-4 p-5">
-                <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-3 sm:p-5 ring-1 ring-slate-200">
-                  <div className="flex items-center justify-between gap-2">
+             <CardContent className="w-full max-w-full overflow-hidden space-y-3 p-3 sm:space-y-4 sm:p-5">
+               <div className="w-full max-w-full min-w-0 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-white p-2 sm:p-5 ring-1 ring-slate-200">
+                 <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <span className="font-medium text-slate-900">Overall progress</span>
                     <Badge>
                       {progressKnownCount}/{progressTotal}
                     </Badge>
                   </div>
-                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200 shadow-inner">
-                    <div className="h-full flex overflow-hidden rounded-full">
+                  <div className="mt-4 h-3 w-full max-w-full overflow-hidden rounded-full bg-slate-200 shadow-inner">
+                    <div className="h-full w-full max-w-full flex overflow-hidden rounded-full">
   <div
   className="bg-green-400 transition-all duration-300 first:rounded-l-full"
   style={{
@@ -2181,24 +2181,24 @@ const startTour = () => {
 </div>
                   </div>
                   <p className="mt-3 text-sm text-slate-600">{progressPercent}% secure</p>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-center">
+                <div className="mt-4 grid grid-cols-1 gap-2 text-xs text-center sm:grid-cols-3">
   <div className="rounded-xl border border-green-200 bg-green-50 p-2">
     <p className="font-semibold text-green-700">Secure</p>
-    <p className="text-sm font-bold text-green-800">
+    <p className="text-xs sm:text-sm font-bold text-green-800">
       {student ? countByMastery(student, progressWordSet, "secure") : 0}
     </p>
   </div>
 
   <div className="rounded-xl border border-amber-200 bg-amber-50 p-2">
     <p className="font-semibold text-amber-700">Developing</p>
-    <p className="text-sm font-bold text-amber-800">
+    <p className="text-xs sm:text-sm font-bold text-amber-800">
       {student ? countByMastery(student, progressWordSet, "developing") : 0}
     </p>
   </div>
 
   <div className="rounded-xl border border-rose-200 bg-rose-50 p-2">
   <p className="font-semibold text-rose-700">Unknown</p>
-  <p className="text-sm font-bold text-rose-800">
+  <p className="text-xs sm:text-sm font-bold text-rose-800">
     {student ? countByMastery(student, progressWordSet, "unknown") : 0}
   </p>
 </div>
