@@ -797,6 +797,8 @@ export default function App() {
   const [activeSection, setActiveSection] = useState(SECTIONS[0]);
   const [search, setSearch] = useState("");
   const [quickMode, setQuickMode] = useState(false);
+  const [printStartSection, setPrintStartSection] = useState(SECTIONS[0]);
+const [printEndSection, setPrintEndSection] = useState(SECTIONS[0]);
   const [sortMode, setSortMode] = useState<SortMode>("az");
   const [quickIndex, setQuickIndex] = useState(0);
 const [quickFeedback, setQuickFeedback] = useState<"secure" | "developing" | "unknown" | null>(null);
@@ -1252,7 +1254,102 @@ if (!student) return;
   setShowStatusModal(true);
   return;
 }
+const printWordList = () => {
+  const startIndex = SECTIONS.indexOf(printStartSection);
+  const endIndex = SECTIONS.indexOf(printEndSection);
 
+  const from = Math.min(startIndex, endIndex);
+  const to = Math.max(startIndex, endIndex);
+
+  const selectedSections = SECTIONS.slice(from, to + 1);
+
+  const wordsToPrint = selectedSections.flatMap((section) => fryLists[section] || []);
+
+  const title =
+    selectedSections.length === 1
+      ? selectedSections[0]
+      : `${selectedSections[0]} to ${selectedSections[selectedSections.length - 1]}`;
+
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Print Word List</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+
+          body {
+            font-family: "Comic Neue", "Comic Sans MS", cursive;
+            font-size: 14px;
+            padding: 28px;
+            color: #111827;
+          }
+
+          h1 {
+            font-size: 22px;
+            margin-bottom: 4px;
+          }
+
+          h2 {
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 400;
+          }
+
+          .word-list {
+            columns: 3;
+            column-gap: 40px;
+          }
+
+          .word {
+            break-inside: avoid;
+            margin-bottom: 8px;
+            line-height: 1.5;
+          }
+
+          .print-button {
+            margin-bottom: 20px;
+            padding: 8px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+          }
+
+          @media print {
+            .print-button {
+              display: none;
+            }
+
+            body {
+              padding: 18px;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+        <button class="print-button" onclick="window.print()">Print</button>
+
+        <h1>Fry Sight Words</h1>
+        <h2>${title}</h2>
+
+        <div class="word-list">
+          ${wordsToPrint
+            .map((word) => `<div class="word">${word}</div>`)
+            .join("")}
+        </div>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+};
   const word = allWords[quickIndex];
   const section =
     SECTIONS.find((name) => fryLists[name].includes(word)) || SECTIONS[0];
@@ -2052,14 +2149,105 @@ const startTour = () => {
   if (!student) {
     return <div className="p-4">Select a student</div>;
   }
+const printWordList = () => {
+  const startIndex = SECTIONS.indexOf(printStartSection);
+const endIndex = SECTIONS.indexOf(printEndSection);
 
+const from = Math.min(startIndex, endIndex);
+const to = Math.max(startIndex, endIndex);
+
+const selectedSections = SECTIONS.slice(from, to + 1);
+const wordsToPrint = selectedSections.flatMap((section) => fryLists[section] || []);
+
+const printTitle =
+  selectedSections.length === 1
+    ? selectedSections[0]
+    : `${selectedSections[0]} to ${selectedSections[selectedSections.length - 1]}`;
+
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Print Word List</title>
+
+        <style>
+          body {
+            font-family: "Comic Neue", "Comic Sans MS", cursive;
+            padding: 24px;
+            font-size: 14px;
+            color: #111827;
+          }
+
+          h1 {
+            margin-bottom: 8px;
+          }
+
+          h2 {
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 16px;
+            font-weight: normal;
+            color: #475569;
+          }
+
+          .word-list {
+            columns: 3;
+            column-gap: 40px;
+          }
+
+          .word {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            break-inside: avoid;
+          }
+
+          .print-button {
+            margin-bottom: 24px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            cursor: pointer;
+          }
+
+          @media print {
+            .print-button {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+        <button class="print-button" onclick="window.print()">
+          Print
+        </button>
+
+        <h1>Fry Sight Words</h1>
+        <h2>${printTitle}</h2>
+
+        <div class="word-list">
+          ${wordsToPrint
+            .map((word) => `<div class="word">${word}</div>`)
+            .join("")}
+        </div>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+};
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto max-w-full space-y-4 px-1 sm:px-0">
         <div
-          id="tour-header"
-          className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm md:p-7"
-        >
+  id="tour-header"
+  className="w-full rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 shadow-sm"
+>
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="pr-2">
               <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
@@ -2070,8 +2258,8 @@ const startTour = () => {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-             <Button
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+  <Button
   onClick={() => setQuickMode((v) => !v)}
   className="h-9 rounded-xl px-3 text-sm sm:h-11 sm:px-5 sm:text-base"
 >
@@ -2104,6 +2292,39 @@ const startTour = () => {
               >
                 Help / Tour
               </Button>
+             <Button
+  type="button"
+  variant="outline"
+  onClick={printWordList}
+  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:h-11 sm:w-auto"
+>
+  Print Word List
+</Button>
+
+<select
+  value={printStartSection}
+  onChange={(e) => setPrintStartSection(e.target.value)}
+  className="h-10 min-w-[140px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm sm:h-11"
+>
+  {SECTIONS.map((section) => (
+    <option key={section} value={section}>
+      {section}
+    </option>
+  ))}
+</select>
+
+<select
+  value={printEndSection}
+  onChange={(e) => setPrintEndSection(e.target.value)}
+className="h-10 min-w-[140px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm sm:h-11"
+>
+  {SECTIONS.map((section) => (
+    <option key={section} value={section}>
+      {section}
+    </option>
+  ))}
+</select>
+
             </div>
           </div>
         </div>
