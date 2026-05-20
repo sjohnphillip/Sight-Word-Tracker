@@ -592,7 +592,7 @@ function openClassSummaryWindow(
   <div class="shell">
     <div class="card">
       <h1>Class Summary Sheet</h1>
-      <p class="sub">Whole-class summary for secure, developing, unknown, total known, and overall progress.</p>
+      <p class="sub">Whole-class summary for secure, develop, unknown, total known, and overall progress.</p>
 
       <div class="meta">
         <div class="pill"><strong>Teacher:</strong> ${teacherName || ""}</div>
@@ -705,7 +705,7 @@ function openStudentProgressGraphWindow(student: Student, progressTotal: number)
   <div class="shell">
     <div class="card">
       <h1>Progress Graph</h1>
-      <p>Student summary of secure, developing, and unknown words across saved assessments.</p>
+      <p>Student summary of secure, develop, and unknown words across saved assessments.</p>
 
       <div class="meta">
         <div class="pill"><strong>Student:</strong> ${student.name || "Student"}</div>
@@ -797,6 +797,8 @@ export default function App() {
   const [activeSection, setActiveSection] = useState(SECTIONS[0]);
   const [search, setSearch] = useState("");
   const [quickMode, setQuickMode] = useState(false);
+  const [printStartSection, setPrintStartSection] = useState(SECTIONS[0]);
+const [printEndSection, setPrintEndSection] = useState(SECTIONS[0]);
   const [sortMode, setSortMode] = useState<SortMode>("az");
   const [quickIndex, setQuickIndex] = useState(0);
 const [quickFeedback, setQuickFeedback] = useState<"secure" | "developing" | "unknown" | null>(null);
@@ -1068,7 +1070,7 @@ if (!student) return;
       level === "secure"
         ? "Secure"
         : level === "developing"
-          ? "Developing"
+          ? "Develop"
           : level === "unknown"
             ? "Unknown"
             : "neutral";
@@ -1107,7 +1109,7 @@ if (!student) return;
 
   const promoteUnknownToDeveloping = (section: string) => {
     if (!student) return;
-    const confirmed = window.confirm(`Move all Unknown words in ${section} to Developing?`);
+    const confirmed = window.confirm(`Move all Unknown words in ${section} to Develop?`);
     if (!confirmed) return;
 
     const words = fryLists[section] || [];
@@ -1252,7 +1254,102 @@ if (!student) return;
   setShowStatusModal(true);
   return;
 }
+const printWordList = () => {
+  const startIndex = SECTIONS.indexOf(printStartSection);
+  const endIndex = SECTIONS.indexOf(printEndSection);
 
+  const from = Math.min(startIndex, endIndex);
+  const to = Math.max(startIndex, endIndex);
+
+  const selectedSections = SECTIONS.slice(from, to + 1);
+
+  const wordsToPrint = selectedSections.flatMap((section) => fryLists[section] || []);
+
+  const title =
+    selectedSections.length === 1
+      ? selectedSections[0]
+      : `${selectedSections[0]} to ${selectedSections[selectedSections.length - 1]}`;
+
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Print Word List</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+
+          body {
+            font-family: "Comic Neue", "Comic Sans MS", cursive;
+            font-size: 14px;
+            padding: 28px;
+            color: #111827;
+          }
+
+          h1 {
+            font-size: 22px;
+            margin-bottom: 4px;
+          }
+
+          h2 {
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 400;
+          }
+
+          .word-list {
+            columns: 3;
+            column-gap: 40px;
+          }
+
+          .word {
+            break-inside: avoid;
+            margin-bottom: 8px;
+            line-height: 1.5;
+          }
+
+          .print-button {
+            margin-bottom: 20px;
+            padding: 8px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+          }
+
+          @media print {
+            .print-button {
+              display: none;
+            }
+
+            body {
+              padding: 18px;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+        <button class="print-button" onclick="window.print()">Print</button>
+
+        <h1>Fry Sight Words</h1>
+        <h2>${title}</h2>
+
+        <div class="word-list">
+          ${wordsToPrint
+            .map((word) => `<div class="word">${word}</div>`)
+            .join("")}
+        </div>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+};
   const word = allWords[quickIndex];
   const section =
     SECTIONS.find((name) => fryLists[name].includes(word)) || SECTIONS[0];
@@ -2052,28 +2149,119 @@ const startTour = () => {
   if (!student) {
     return <div className="p-4">Select a student</div>;
   }
+const printWordList = () => {
+  const startIndex = SECTIONS.indexOf(printStartSection);
+const endIndex = SECTIONS.indexOf(printEndSection);
 
+const from = Math.min(startIndex, endIndex);
+const to = Math.max(startIndex, endIndex);
+
+const selectedSections = SECTIONS.slice(from, to + 1);
+const wordsToPrint = selectedSections.flatMap((section) => fryLists[section] || []);
+
+const printTitle =
+  selectedSections.length === 1
+    ? selectedSections[0]
+    : `${selectedSections[0]} to ${selectedSections[selectedSections.length - 1]}`;
+
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Print Word List</title>
+
+        <style>
+          body {
+            font-family: "Comic Neue", "Comic Sans MS", cursive;
+            padding: 24px;
+            font-size: 14px;
+            color: #111827;
+          }
+
+          h1 {
+            margin-bottom: 8px;
+          }
+
+          h2 {
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 16px;
+            font-weight: normal;
+            color: #475569;
+          }
+
+          .word-list {
+            columns: 3;
+            column-gap: 40px;
+          }
+
+          .word {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            break-inside: avoid;
+          }
+
+          .print-button {
+            margin-bottom: 24px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            cursor: pointer;
+          }
+
+          @media print {
+            .print-button {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+        <button class="print-button" onclick="window.print()">
+          Print
+        </button>
+
+        <h1>Fry Sight Words</h1>
+        <h2>${printTitle}</h2>
+
+        <div class="word-list">
+          ${wordsToPrint
+            .map((word) => `<div class="word">${word}</div>`)
+            .join("")}
+        </div>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+};
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-4 md:px-6 md:py-6">
-      <div className="mx-auto max-w-[1600px] space-y-5">
+    <div className="min-h-screen bg-slate-50 px-2 py-3 sm:px-4 md:px-6 md:py-5">
+      <div className="mx-auto w-full max-w-full space-y-4">
         <div
-          id="tour-header"
-          className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm md:p-7"
-        >
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+  id="tour-header"
+  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 md:px-6 shadow-sm"
+>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"> 
             <div className="pr-2">
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
                 Sight Word Tracker
               </h1>
-              <p className="mt-2 text-sm text-slate-500 md:text-base">
+              <p className="mt-1 text-sm text-slate-500">
                 Clear tracking for reading progress.
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-             <Button
+            <div className="flex flex-wrap items-center gap-2"> 
+  <Button
   onClick={() => setQuickMode((v) => !v)}
-  className="h-11 px-4 w-full rounded-2xl sm:w-auto"
+  className="h-9 rounded-xl px-4 text-sm font-medium"
 >
   {quickMode ? "Grid" : "Quick Assess"}
 </Button>
@@ -2084,7 +2272,7 @@ const startTour = () => {
 <Button
   variant="outline"
   onClick={() => setShowReportPreview(true)}
-  className="h-11 w-full rounded-2xl px-5 sm:w-auto"
+  className="h-9 rounded-xl px-4 text-sm font-medium"
 >
   Progress Report
 </Button>
@@ -2092,7 +2280,7 @@ const startTour = () => {
               <Button
                 variant="outline"
                 onClick={openEndReportPopup}
-                className="h-11 rounded-2xl px-5"
+                className="h-9 rounded-xl px-4 text-sm font-medium"
               >
                 End Report
               </Button>
@@ -2100,10 +2288,43 @@ const startTour = () => {
               <Button
                 variant="outline"
                 onClick={startTour}
-                className="h-11 rounded-2xl px-5"
+                className="h-9 rounded-xl px-4 text-sm font-medium"
               >
                 Help / Tour
               </Button>
+             <Button
+  type="button"
+  variant="outline"
+  onClick={printWordList}
+  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:h-11 sm:w-auto"
+>
+  Print Word List
+</Button>
+
+<select
+  value={printStartSection}
+  onChange={(e) => setPrintStartSection(e.target.value)}
+  className="h-10 min-w-[140px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm sm:h-11"
+>
+  {SECTIONS.map((section) => (
+    <option key={section} value={section}>
+      {section}
+    </option>
+  ))}
+</select>
+
+<select
+  value={printEndSection}
+  onChange={(e) => setPrintEndSection(e.target.value)}
+className="h-10 min-w-[140px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm sm:h-11"
+>
+  {SECTIONS.map((section) => (
+    <option key={section} value={section}>
+      {section}
+    </option>
+  ))}
+</select>
+
             </div>
           </div>
         </div>
@@ -2111,7 +2332,7 @@ const startTour = () => {
         <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
           {/* LEFT */}
           <div className="space-y-5">
-            <Card id="tour-student-controls" className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <Card id="tour-student-controls" className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
                <CardTitle className="text-[28px] font-semibold text-slate-900">
   Progress overview
@@ -2136,16 +2357,16 @@ const startTour = () => {
   })()}
 </p>
               </CardHeader>
-              <CardContent className="space-y-4 p-5">
-                <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-5 ring-1 ring-slate-200">
-                  <div className="flex items-center justify-between gap-2">
+             <CardContent className="w-full max-w-full overflow-hidden space-y-3 p-3 sm:space-y-4 sm:p-5">
+               <div className="w-full max-w-full min-w-0 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-white p-2 sm:p-5 ring-1 ring-slate-200">
+                 <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <span className="font-medium text-slate-900">Overall progress</span>
                     <Badge>
                       {progressKnownCount}/{progressTotal}
                     </Badge>
                   </div>
-                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200 shadow-inner">
-                    <div className="h-full flex overflow-hidden rounded-full">
+                  <div className="mt-4 h-3 w-full max-w-full overflow-hidden rounded-full bg-slate-200 shadow-inner">
+                    <div className="h-full w-full max-w-full flex overflow-hidden rounded-full">
   <div
   className="bg-green-400 transition-all duration-300 first:rounded-l-full"
   style={{
@@ -2181,24 +2402,24 @@ const startTour = () => {
 </div>
                   </div>
                   <p className="mt-3 text-sm text-slate-600">{progressPercent}% secure</p>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-center">
+                <div className="mt-4 grid grid-cols-1 gap-2 text-xs text-center sm:grid-cols-3">
   <div className="rounded-xl border border-green-200 bg-green-50 p-2">
     <p className="font-semibold text-green-700">Secure</p>
-    <p className="text-sm font-bold text-green-800">
+    <p className="text-xs sm:text-sm font-bold text-green-800">
       {student ? countByMastery(student, progressWordSet, "secure") : 0}
     </p>
   </div>
 
   <div className="rounded-xl border border-amber-200 bg-amber-50 p-2">
     <p className="font-semibold text-amber-700">Develop</p>
-    <p className="text-sm font-bold text-amber-800">
+    <p className="text-xs sm:text-sm font-bold text-amber-800">
       {student ? countByMastery(student, progressWordSet, "developing") : 0}
     </p>
   </div>
 
   <div className="rounded-xl border border-rose-200 bg-rose-50 p-2">
   <p className="font-semibold text-rose-700">Unknown</p>
-  <p className="text-sm font-bold text-rose-800">
+  <p className="text-xs sm:text-sm font-bold text-rose-800">
     {student ? countByMastery(student, progressWordSet, "unknown") : 0}
   </p>
 </div>
@@ -2208,7 +2429,7 @@ const startTour = () => {
                 <Button
                   id="tour-save-assessment"
                   variant="outline"
-                  className="h-11 w-full rounded-2xl"
+                  className="h-9 w-full rounded-xl text-sm font-medium"
                   onClick={saveAssessment}
                 >
                   Save assessment
@@ -2216,7 +2437,7 @@ const startTour = () => {
 
                 <Button
                   variant="outline"
-                  className="h-11 w-full rounded-2xl"
+                  className="h-9 w-full rounded-xl text-sm font-medium"
                   onClick={handleOpenGraph}
                 >
                   
@@ -2225,7 +2446,7 @@ const startTour = () => {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle className="text-[28px] font-semibold text-slate-900">
@@ -2305,8 +2526,8 @@ const startTour = () => {
 
           {/* MIDDLE */}
           <div className="space-y-5">
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <CardContent className="p-5 md:p-6">
+            <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4 md:p-5">
                 <div
                   id="tour-student-controls"
                   className="grid gap-4 md:grid-cols-2 xl:grid-cols-6"
@@ -2458,7 +2679,7 @@ const startTour = () => {
                     <Button
                       variant="outline"
                       onClick={deleteCurrentStudent}
-                      className="h-11 min-w-[110px] rounded-2xl px-4"
+                      className="h-9 min-w-[100px] rounded-xl px-3 text-sm font-medium"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
@@ -2467,7 +2688,7 @@ const startTour = () => {
                     <select
                       value={sortMode}
                       onChange={(e) => setSortMode(e.target.value as SortMode)}
-                      className="h-11 min-w-[140px] rounded-2xl border border-slate-200 bg-white px-3 text-sm"
+                      className="h-9 min-w-[130px] rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm"
                     >
                       <option value="az">A-Z</option>
                       <option value="most">Most known</option>
@@ -2478,7 +2699,7 @@ const startTour = () => {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle className="text-[28px] font-semibold text-slate-900">
@@ -2505,27 +2726,27 @@ const startTour = () => {
               <CardContent className="space-y-4 p-5">
                 {quickMode ? (
                   <div
-  className={`rounded-3xl border p-6 text-center transition duration-150 ${
-    quickFeedback === "secure"
-      ? "border-green-300 bg-green-50"
-      : quickFeedback === "developing"
-      ? "border-orange-300 bg-orange-50"
-      : quickFeedback === "unknown"
-      ? "border-red-300 bg-red-50"
-      : "border-slate-200 bg-slate-50"
-  }`}
+  className={`rounded-2xl border p-3 text-center transition duration-150 shadow-sm hover:shadow-md ${
+  quickFeedback === "secure"
+    ? "border-emerald-300 bg-emerald-50"
+    : quickFeedback === "developing"
+    ? "border-amber-300 bg-amber-50"
+    : quickFeedback === "unknown"
+    ? "border-rose-300 bg-rose-50"
+    : "border-slate-200 bg-white"
+}`}
 >
                     <p className="text-sm uppercase tracking-[0.18em] text-slate-500">
                       Quick assess
                     </p>
-                    <h3 className="mt-3 text-3xl font-bold text-slate-900">
+                    <h3 className="mb-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-lg font-semibold text-slate-900">
                       {allWords[quickIndex]}
                     </h3>
-                 <div className="mt-6 flex flex-wrap justify-center gap-3">
+                 <div className="mt-3 flex flex-wrap justify-center gap-2">
   <Button
     type="button"
     onClick={() => nextQuickWord("secure")}
-    className="!h-11 !rounded-2xl !px-6 !bg-green-100 !text-green-700 !border !border-green-300 hover:!bg-green-200"
+    className="h-9 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
   >
     Secure
   </Button>
@@ -2533,7 +2754,7 @@ const startTour = () => {
   <Button
     type="button"
     onClick={() => nextQuickWord("developing")}
-    className="!h-11 !rounded-2xl !px-6 !bg-orange-100 !text-orange-700 !border !border-orange-300 hover:!bg-orange-200"
+    className="h-9 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-medium text-amber-700 hover:bg-amber-100"
   >
     Develop
   </Button>
@@ -2541,7 +2762,7 @@ const startTour = () => {
   <Button
     type="button"
     onClick={() => nextQuickWord("unknown")}
-    className="!h-11 !rounded-2xl !px-6 !bg-red-100 !text-red-700 !border !border-red-300 hover:!bg-red-200"
+    className="h-9 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-medium text-rose-700 hover:bg-rose-100"
   >
     Unknown
   </Button>
@@ -2576,14 +2797,14 @@ const startTour = () => {
                         onClick={() => promoteDevelopingToSecure(activeSection)}
                         className="h-10 rounded-xl px-4"
                       >
-                        Developing → Secure
+                        Develop → Secure
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => promoteUnknownToDeveloping(activeSection)}
                         className="h-10 rounded-xl px-4"
                       >
-                        Unknown → Developing
+                        Unknown → Develop
                       </Button>
                       <Button
                         variant="outline"
@@ -2596,7 +2817,7 @@ const startTour = () => {
 
                     <div id="tour-word-grid">
                       <ScrollArea className="h-[560px] pr-3">
-                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                           {filteredWords.map((word) => {
                             const mastery = student.mastery?.[activeSection]?.[word];
                             const inPracticeList = (student.selectedPracticeWords || []).includes(
@@ -2606,18 +2827,17 @@ const startTour = () => {
                             return (
                               <div
                                 key={word}
-                                className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+                                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
                               >
                                 <button
   onClick={() => toggleWord(word, activeSection)}
   disabled={!hasSelectedStudent}
-  className={`min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 text-left text-[28px] font-semibold text-slate-800 
-    `}
+  className="min-h-[44px] sm:min-h-[56px] w-full rounded-xl sm:rounded-2xl border border-slate-200 bg-slate-50 px-3 sm:px-5 py-3 sm:py-5 text-left text-lg sm:text-[28px] font-semibold text-slate-800"
 >
                                   {word}
                                 </button>
 
-                                <div className="mt-4 flex flex-wrap gap-2">
+                                <div className="mt-2 flex flex-wrap gap-1.5">
                                   <button
                                    onClick={() => {
   
@@ -2626,10 +2846,10 @@ const startTour = () => {
 }}
 
                                     className={cn(
-  "min-w-[96px] flex-1 rounded-2xl border px-3 py-3 text-center",
+  "min-w-[120px] flex-1 rounded-2xl border px-3 py-1.5 text-center text-sm leading-tight transition-colors duration-150",
   mastery === "secure"
-    ? "border-green-500 bg-green-500 text-white"
-    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100",
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
   !selectedId && "opacity-50 cursor-not-allowed"
 )}
                                   >
@@ -2639,22 +2859,22 @@ const startTour = () => {
                                   <button
                                     onClick={() => setMastery(word, activeSection, "developing")}
                                     className={cn(
-                                      "min-w-[120px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150",
+                                      "min-w-[110px] flex-1 rounded-xl border px-3 py-1.5 text-center text-sm font-medium transition-colors duration-150",
                                       mastery === "developing"
-                                        ? "border-orange-400 bg-orange-400 text-white"
-                                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                                        ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                                     )}
                                   >
-                                    Developing
+                                    Develop
                                   </button>
 
                                   <button
                                     onClick={() => setMastery(word, activeSection, "unknown")}
                                     className={cn(
-                                      "min-w-[110px] flex-1 rounded-2xl border px-3 py-3 text-center text-sm leading-tight transition-colors duration-150",
+                                      "min-w-[110px] flex-1 rounded-xl border px-3 py-1.5 text-center text-sm font-medium transition-colors duration-150",
                                       mastery === "unknown"
-                                        ? "border-rose-500 bg-rose-500 text-white"
-                                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                                        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                                     )}
                                   >
                                     Unknown
@@ -2664,7 +2884,7 @@ const startTour = () => {
                                 <Button
                                   variant="outline"
                                   onClick={() => togglePracticeWord(word)}
-                                  className="mt-3 h-10 w-full rounded-2xl"
+                                  className="mt-2 h-8 w-full rounded-xl text-sm"
                                 >
                                   {inPracticeList ? "Remove from practice" : "Add to practice"}
                                 </Button>
@@ -2682,7 +2902,7 @@ const startTour = () => {
 
           {/* RIGHT */}
           <div className="space-y-5">
-           <Card id="tour-practice-list" className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+           <Card id="tour-practice-list" className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle className="text-[28px] font-semibold text-slate-900">
@@ -2760,7 +2980,7 @@ const startTour = () => {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CardHeader className="p-5 pb-0">
                 <CardTitle className="text-[28px] font-semibold text-slate-900">
                   Assessment history
@@ -2782,7 +3002,7 @@ const startTour = () => {
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2 text-sm text-slate-600">
                           <p>Secure: {entry.secureCount}</p>
-                          <p>Developing: {entry.developingCount}</p>
+                          <p>Develop: {entry.developingCount}</p>
                           <p>Unknown: {entry.unknownCount}</p>
                         </div>
                       </div>
@@ -2795,7 +3015,7 @@ const startTour = () => {
             </Card>
 
             {statusMessage ? (
-              <Card className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+              <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <CardContent className="p-5">
                   <p className="text-sm text-slate-600">{statusMessage}</p>
                 </CardContent>
@@ -2803,7 +3023,7 @@ const startTour = () => {
             ) : null}
             {showReportPreview && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+    <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
 
       <h2 className="text-xl font-semibold mb-4">
         Progress Report
@@ -2836,7 +3056,7 @@ const startTour = () => {
       </div>
       {showStatusModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div className="bg-white rounded-2xl shadow-xl p-6 w-[320px] text-center">
+    <div className="bg-white rounded-2xl shadow-xl p-4 w-[320px] text-center">
       <p className="text-slate-800 text-sm mb-4">{statusMessage}</p>
 
       <button
